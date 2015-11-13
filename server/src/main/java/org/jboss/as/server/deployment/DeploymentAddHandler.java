@@ -33,6 +33,7 @@ import static org.jboss.as.server.controller.resources.DeploymentAttributes.PERS
 import static org.jboss.as.server.controller.resources.DeploymentAttributes.RUNTIME_NAME;
 import static org.jboss.as.server.controller.resources.DeploymentAttributes.SERVER_ADD_ATTRIBUTES;
 import static org.jboss.as.server.deployment.DeploymentHandlerUtils.asString;
+import static org.jboss.as.server.deployment.DeploymentHandlerUtils.createFailureException;
 import static org.jboss.as.server.deployment.DeploymentHandlerUtils.getInputStream;
 import static org.jboss.as.server.deployment.DeploymentHandlerUtils.hasValidContentAdditionParameterDefined;
 
@@ -54,7 +55,7 @@ import org.jboss.as.server.logging.ServerLogger;
 import org.jboss.as.server.services.security.AbstractVaultReader;
 import org.jboss.dmr.ModelNode;
 
-import static org.jboss.as.server.deployment.DeploymentHandlerUtils.createFailureException;
+
 
 /**
  * Handles addition of a deployment to the model.

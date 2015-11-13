@@ -98,7 +98,7 @@ class FilePersistenceUtils {
         }
     }
 
-    static File writeToTempFile(ExposedByteArrayOutputStream marshalled, File tempFileName, File fileName) throws IOException {
+    static File writeToTempFile(InputStream is, File tempFileName, File fileName) throws IOException {
         Path targetPath = tempFileName.toPath();
         deleteFile(tempFileName);
         try {
@@ -106,9 +106,7 @@ class FilePersistenceUtils {
         } catch (IOException ioex) {
             ControllerLogger.ROOT_LOGGER.error(ioex.getLocalizedMessage(), ioex);
         }
-        try (InputStream is = marshalled.getInputStream()) {
-            Files.copy(is, targetPath, StandardCopyOption.REPLACE_EXISTING);
-        }
+        Files.copy(is, targetPath, StandardCopyOption.REPLACE_EXISTING);
         return tempFileName;
     }
 

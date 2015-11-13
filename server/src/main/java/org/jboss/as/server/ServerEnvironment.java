@@ -24,8 +24,12 @@ package org.jboss.as.server;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.GeneralSecurityException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
@@ -33,6 +37,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import org.eclipse.jgit.lib.Constants;
 
 import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.ProcessType;
@@ -44,11 +49,13 @@ import org.jboss.as.controller.interfaces.InetAddressUtil;
 import org.jboss.as.controller.operations.common.ProcessEnvironment;
 import org.jboss.as.controller.persistence.ConfigurationFile;
 import org.jboss.as.network.NetworkUtils;
+import org.jboss.as.server.controller.git.GitRepository;
 import org.jboss.as.server.logging.ServerLogger;
 import org.jboss.as.version.ProductConfig;
 import org.jboss.modules.Module;
 import org.jboss.modules.ModuleIdentifier;
 import org.jboss.modules.ModuleLoader;
+import org.wildfly.client.config.ConfigXMLParseException;
 import org.wildfly.common.cpu.ProcessorInfo;
 import org.wildfly.security.manager.WildFlySecurityManager;
 
@@ -323,30 +330,33 @@ public class ServerEnvironment extends ProcessEnvironment implements Serializabl
     private final UUID serverUUID;
     private final long startTime;
     private final boolean startSuspended;
+    private GitRepository repository;
 
     public ServerEnvironment(final String hostControllerName, final Properties props, final Map<String, String> env, final String serverConfig,
                              final ConfigurationFile.InteractionPolicy configInteractionPolicy, final LaunchType launchType,
                              final RunningMode initialRunningMode, ProductConfig productConfig, boolean startSuspended) {
         this(hostControllerName, props, env, serverConfig, configInteractionPolicy, launchType, initialRunningMode, productConfig,
-                System.currentTimeMillis(), startSuspended);
+                System.currentTimeMillis(), startSuspended, null, null, null);
     }
 
     public ServerEnvironment(final String hostControllerName, final Properties props, final Map<String, String> env, final String serverConfig,
                              final ConfigurationFile.InteractionPolicy configInteractionPolicy, final LaunchType launchType,
                              final RunningMode initialRunningMode, ProductConfig productConfig) {
         this(hostControllerName, props, env, serverConfig, configInteractionPolicy, launchType, initialRunningMode, productConfig,
-                System.currentTimeMillis(), false);
+                System.currentTimeMillis(), false, null, null, null);
     }
 
     public ServerEnvironment(final String hostControllerName, final Properties props, final Map<String, String> env, final String serverConfig,
                              final ConfigurationFile.InteractionPolicy configInteractionPolicy, final LaunchType launchType,
-                             final RunningMode initialRunningMode, ProductConfig productConfig, long startTime) {
-        this(hostControllerName, props, env, serverConfig, configInteractionPolicy, launchType, initialRunningMode, productConfig, startTime, false);
+                             final RunningMode initialRunningMode, ProductConfig productConfig, long startTime, String gitRepository, String gitBranch, String gitAuthConfiguration) {
+        this(hostControllerName, props, env, serverConfig, configInteractionPolicy, launchType, initialRunningMode, productConfig,
+                startTime, false, gitRepository, gitBranch, gitAuthConfiguration);
     }
 
     public ServerEnvironment(final String hostControllerName, final Properties props, final Map<String, String> env, final String serverConfig,
                              final ConfigurationFile.InteractionPolicy configInteractionPolicy, final LaunchType launchType,
-                             final RunningMode initialRunningMode, ProductConfig productConfig, long startTime, boolean startSuspended) {
+                             final RunningMode initialRunningMode, ProductConfig productConfig, long startTime, boolean startSuspended,
+                             String gitRepository, String gitBranch, String gitAuthConfiguration) {
         this.startSuspended = startSuspended;
         assert props != null;
 
@@ -390,6 +400,7 @@ public class ServerEnvironment extends ProcessEnvironment implements Serializabl
             controllerTempDir = serverTempDir;
             domainBaseDir = null;
             domainConfigurationDir = null;
+            repository = null;
             WildFlySecurityManager.setPropertyPrivileged(ServerEnvironment.JBOSS_PERSIST_SERVER_CONFIG, "false");
         } else {
 
@@ -449,13 +460,6 @@ public class ServerEnvironment extends ProcessEnvironment implements Serializabl
             if (standalone && (!serverConfigurationDir.exists() || !serverConfigurationDir.isDirectory())) {
                 throw ServerLogger.ROOT_LOGGER.configDirectoryDoesNotExist(serverConfigurationDir);
             }
-
-            String defaultServerConfig = WildFlySecurityManager.getPropertyPrivileged(JBOSS_SERVER_DEFAULT_CONFIG, "standalone.xml");
-            serverConfigurationFile = standalone ? new ConfigurationFile(serverConfigurationDir, defaultServerConfig, serverConfig, configInteractionPolicy) : null;
-            // Adds a system property to indicate whether or not the server configuration should be persisted
-            @SuppressWarnings("deprecation")
-            final String propertyKey = JBOSS_PERSIST_SERVER_CONFIG;
-            WildFlySecurityManager.setPropertyPrivileged(propertyKey, Boolean.toString(configInteractionPolicy == null || !configInteractionPolicy.isReadOnly()));
 
             tmp = getFileFromProperty(SERVER_DATA_DIR, props);
             if (tmp == null) {
@@ -525,6 +529,35 @@ public class ServerEnvironment extends ProcessEnvironment implements Serializabl
                 throw ServerLogger.ROOT_LOGGER.couldNotCreateControllerTempDirectory(tmp);
             }
             controllerTempDir = tmp;
+            if (gitRepository != null && !gitRepository.isEmpty()) {
+                if(Files.exists(serverBaseDir.toPath().resolve(Constants.DOT_GIT))) {
+                    gitRepository = "local";
+                }
+            }
+            String defaultServerConfig = WildFlySecurityManager.getPropertyPrivileged(JBOSS_SERVER_DEFAULT_CONFIG, "standalone.xml");
+            if (gitRepository != null && !gitRepository.isEmpty()) {
+                try {
+                    URI authConfiguration = null;
+                    if(gitAuthConfiguration != null) {
+                        try {
+                        authConfiguration = new URI(gitAuthConfiguration);
+                        } catch(URISyntaxException ex) {
+                             ServerLogger.ROOT_LOGGER.errorUsingGit(ex, ex.getMessage());
+                        }
+                    }
+                    repository = new GitRepository(serverConfigurationDir.getParentFile().toPath(), gitRepository, gitBranch, authConfiguration, listIgnoredFiles(defaultServerConfig));
+                } catch(IllegalArgumentException | IOException | ConfigXMLParseException | GeneralSecurityException ex) {
+                    repository = null;
+                    ServerLogger.ROOT_LOGGER.errorUsingGit(ex, ex.getMessage());
+                }
+            } else {
+                repository = null;
+            }
+            serverConfigurationFile = standalone ? new ConfigurationFile(serverConfigurationDir, defaultServerConfig, serverConfig, configInteractionPolicy, repository != null) : null;
+            // Adds a system property to indicate whether or not the server configuration should be persisted
+            @SuppressWarnings("deprecation")
+            final String propertyKey = JBOSS_PERSIST_SERVER_CONFIG;
+            WildFlySecurityManager.setPropertyPrivileged(propertyKey, Boolean.toString(configInteractionPolicy == null || !configInteractionPolicy.isReadOnly()));
 
             // Optional paths for the domain mode
             tmp = getFileFromProperty(DOMAIN_BASE_DIR, props);
@@ -606,6 +639,36 @@ public class ServerEnvironment extends ProcessEnvironment implements Serializabl
             Module.registerURLStreamHandlerFactoryModule(vfsModule);
         } catch (Exception ex) {
             ServerLogger.ROOT_LOGGER.cannotAddURLStreamHandlerFactory(ex, VFS_MODULE_IDENTIFIER);
+        }
+    }
+
+    private Set<String> listIgnoredFiles(String defaultServerConfig) {
+        Set<String> ignored = new HashSet<>();
+        setIgnored(ignored, serverTempDir.toPath(), false);
+        setIgnored(ignored, serverDataDir.toPath(), true);
+        setIgnored(ignored, serverLogDir.toPath(), false);
+        setIgnored(ignored, serverConfigurationDir.toPath().resolve(defaultServerConfig.replace('.', '_') + "_history"), false);
+        setIgnored(ignored, serverConfigurationDir.toPath().resolve("logging.properties"), false);
+        setIgnored(ignored, serverBaseDir.toPath().resolve("deployments"), false);
+        setUnignored(ignored, serverContentDir.toPath());
+        return ignored;
+    }
+
+    private void setIgnored(Set<String> ignored, Path path, boolean wilcard) {
+        final Path serverConfigurationPath = serverBaseDir.toPath();
+        if(path.startsWith(serverConfigurationPath)) {
+            if(wilcard) {
+                ignored.add(serverConfigurationPath.relativize(path) + "/*");
+            } else {
+                ignored.add(serverConfigurationPath.relativize(path).toString());
+            }
+        }
+    }
+
+    private void setUnignored(Set<String> ignored, Path path) {
+        final Path serverConfigurationPath = serverBaseDir.toPath();
+        if(path.startsWith(serverConfigurationPath)) {
+            ignored.add("!" + serverConfigurationPath.relativize(path).toString());
         }
     }
 
@@ -1030,6 +1093,14 @@ public class ServerEnvironment extends ProcessEnvironment implements Serializabl
      */
     public long getStartTime() {
         return startTime;
+    }
+
+    public boolean useGit() {
+        return this.repository != null;
+    }
+
+    public GitRepository getGitRepository() {
+        return repository;
     }
 
     /**

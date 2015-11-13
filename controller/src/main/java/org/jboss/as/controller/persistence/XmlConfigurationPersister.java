@@ -167,7 +167,7 @@ public class XmlConfigurationPersister extends AbstractConfigurationPersister {
     }
 
     @Override
-    public String snapshot() throws ConfigurationPersistenceException {
+    public String snapshot(String name, String comment) throws ConfigurationPersistenceException {
         return "";
     }
 }

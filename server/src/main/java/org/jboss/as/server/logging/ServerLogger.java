@@ -572,6 +572,30 @@ public interface ServerLogger extends BasicLogger {
     String argStartMode();
 
     /**
+     * Instructions for the {@link CommandLineConstants#GIT_REPO} command line argument.
+     *
+     * @return the message
+     */
+    @Message(id = Message.NONE, value = "The git repository to clone to get the server configuration.")
+    String argGitRepo();
+
+    /**
+     * Instructions for the {@link CommandLineConstants#GIT_BRANCH} command line argument.
+     *
+     * @return the message
+     */
+    @Message(id = Message.NONE, value = "The git branch to use to get the server configuration. Default is 'master'")
+    String argGitBranch();
+
+    /**
+     * Instructions for the {@link CommandLineConstants#GIT_AUTH} command line argument.
+     *
+     * @return the message
+     */
+    @Message(id = Message.NONE, value = "The elytron configuration file for managing git credentials. Default is 'null'")
+    String argGitAuth();
+
+    /**
      * Creates an error message indicating a value was expected for the given command line option.
      *
      * @param option the name of the command line option
@@ -1277,6 +1301,20 @@ public interface ServerLogger extends BasicLogger {
     @Message(id = 266, value = "Server home is set to '%s', but server real home is '%s' - unpredictable results may occur.")
     void serverHomeMismatch(Path passed, Path real);
 
+    @Message(id = 267, value = "Failed to pull the repository %s")
+    RuntimeException failedToPullRepository(@Cause Exception cause, String repository);
+
+    @Message(id = 268, value = "Failed to initialize the repository %s")
+    RuntimeException failedToInitRepository(@Cause Exception cause, String repository);
+    /**
+     * Logs an error message indicating a failure to store the configuration file.
+     *
+     * @param cause the cause of the error.
+     * @param name  the name of the configuration.
+     */
+    @LogMessage(level = ERROR)
+    @Message(id = 269, value = "Failed to publish configuration to %s")
+    void failedToPublishConfiguration(@Cause Throwable cause, String name);
     ////////////////////////////////////////////////
     //Messages without IDs
 
@@ -1285,4 +1323,12 @@ public interface ServerLogger extends BasicLogger {
 
     @Message(id = Message.NONE, value = "The attribute '%s' has changed from '%s' to '%s'")
     String jmxAttributeChange(String name, String oldState, String stateString);
+
+    @LogMessage(level = INFO)
+    @Message(id = Message.NONE, value = "The configuration history is managed through Git")
+    void usingGit();
+
+    @LogMessage(level = ERROR)
+    @Message(id = 270, value = "Git error: %s")
+    void errorUsingGit(@Cause Throwable cause, String message);
 }
