@@ -3504,4 +3504,7 @@ public interface ControllerLogger extends BasicLogger {
     @Message(id = 444, value = "The handler for operation '%s' at address '%s' attempted to add a stage %s step. " +
             "This is not valid for a 'profile' resource on process type %s so this step will not be executed.")
     void invalidRuntimeStageForProfile(String operation, String address, OperationContext.Stage stage, ProcessType processType);
+
+    @Message(id = 445, value = "Cannot synchronize the model due to missing extensions: %s")
+    OperationFailedException missingExtensions(Set<String> missingExtensions);
 }
