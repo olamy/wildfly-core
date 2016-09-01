@@ -20,62 +20,61 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.as.domain.controller.operations;
+package org.jboss.as.server.operations.sync;
 
-import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.HOST;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.SUBSYSTEM;
+import static org.jboss.as.controller.operations.common.OrderedChildTypesAttachment.ORDERED_CHILDREN;
 
 import org.jboss.as.controller.OperationContext;
 import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.OperationStepHandler;
-import org.jboss.as.controller.PathAddress;
-import org.jboss.as.controller.PathElement;
 import org.jboss.as.controller.SimpleOperationDefinition;
 import org.jboss.as.controller.SimpleOperationDefinitionBuilder;
 import org.jboss.as.controller.access.management.SensitiveTargetAccessConstraintDefinition;
 import org.jboss.as.controller.descriptions.common.ControllerResolver;
 import org.jboss.as.controller.operations.common.OrderedChildTypesAttachment;
+import org.jboss.as.controller.transform.Transformers;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
 
 /**
- * Handler returning the operations needed to recreate the current model. This handler adds additional functionality
- * to filter specific resources which should be included. This may either be the ignored resources on the slave
- * host-controller, or in general the local host resource.
+ * Step handler responsible for collecting a complete description of the domain model,
+ * which is going to be sent back to a remote host-controller. This is called when the
+ * remote slave boots up or when it reconnects to the DC
  *
+ * @author John Bailey
+ * @author Kabir Khan
  * @author Emanuel Muckenhuber
  */
-public class ReadMasterDomainOperationsHandler implements OperationStepHandler {
+public class ReadServerModelHandler implements OperationStepHandler {
 
-    public static final String OPERATION_NAME = "read-master-domain-operations";
-
-    private static final PathAddressFilter DEFAULT_FILTER = new PathAddressFilter(true);
-    public static final SimpleOperationDefinition DEFINITION = new SimpleOperationDefinitionBuilder("model-operations", ControllerResolver.getResolver(SUBSYSTEM))
+    public static final String OPERATION_NAME = "read-server-model";
+    public static final SimpleOperationDefinition DEFINITION = new SimpleOperationDefinitionBuilder(OPERATION_NAME, ControllerResolver.getResolver(SUBSYSTEM))
             .addAccessConstraint(SensitiveTargetAccessConstraintDefinition.READ_WHOLE_CONFIG)
             .setReplyType(ModelType.LIST)
             .setReplyValueType(ModelType.OBJECT)
             .setPrivateEntry()
             .build();
 
-    static {
-        // Ignore the local host element, since it's represented as normal a model and not a proxy
-        DEFAULT_FILTER.addReject(PathAddress.pathAddress(PathElement.pathElement(HOST)));
-    }
+    private final boolean lock;
 
-    private final OrderedChildTypesAttachment orderedChildTypesAttachment = new OrderedChildTypesAttachment();
-
-    ReadMasterDomainOperationsHandler() {
+    public ReadServerModelHandler(boolean lock) {
+        this.lock = lock;
     }
 
     @Override
-    public void execute(final OperationContext context, final ModelNode operation) throws OperationFailedException {
-        context.acquireControllerLock();
-        context.attach(PathAddressFilter.KEY, DEFAULT_FILTER);
-        context.attach(OrderedChildTypesAttachment.KEY, orderedChildTypesAttachment);
-        context.addStep(operation, GenericModelDescribeOperationHandler.INSTANCE, OperationContext.Stage.MODEL, true);
+    public void execute(OperationContext context, ModelNode operation) throws OperationFailedException {
+        // if the calling process has already acquired a lock, don't relock.
+        if (lock) {
+            context.acquireControllerLock();
+        }
+        final Transformers.TransformationInputs transformationInputs = new Transformers.TransformationInputs(context);
+        final ReadServerModelUtil readUtil = ReadServerModelUtil.readServerResourcesForInitialConnect(Transformers.Factory.createLocal(),
+                transformationInputs, Transformers.DEFAULT, transformationInputs.getRootResource());
+        context.getResult().set(readUtil.getDescribedResources());
+        if(context.getAttachment(OrderedChildTypesAttachment.KEY) != null) {
+            context.getResponseHeaders().get(ORDERED_CHILDREN).set(context.getAttachment(OrderedChildTypesAttachment.KEY).toModel());
+        }
     }
 
-    OrderedChildTypesAttachment getOrderedChildTypes() {
-        return orderedChildTypesAttachment;
-    }
 }

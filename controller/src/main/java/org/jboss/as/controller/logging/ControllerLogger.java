@@ -3496,4 +3496,7 @@ public interface ControllerLogger extends BasicLogger {
     @LogMessage(level = Level.WARN)
     @Message(id = 442, value = "Error stopping server")
     void errorStoppingServer(@Cause Exception cause);
+
+    @Message(id = 443, value = "Cannot synchronize the model due to missing extensions: %s")
+    OperationFailedException missingExtensions(Set<String> missingExtensions);
 }

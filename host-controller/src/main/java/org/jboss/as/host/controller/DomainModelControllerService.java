@@ -919,7 +919,7 @@ public class DomainModelControllerService extends AbstractControllerService impl
                 contentRepository,
                 ignoredRegistry,
                 new DomainModelControllerService.InternalExecutor(),
-                this,
+                expressionResolver,
                 environment,
                 getExecutorServiceInjector().getValue(),
                 currentRunningMode,

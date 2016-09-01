@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.as.domain.controller.operations;
+package org.jboss.as.controller.operations.sync;
 
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.DOMAIN_ORGANIZATION;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.FAILURE_DESCRIPTION;
@@ -61,10 +61,10 @@ import org.jboss.dmr.ModelType;
  * @author Emanuel Muckenhuber
  */
 public class GenericModelDescribeOperationHandler implements OperationStepHandler {
+    private static final String OPERATION_NAME = "describe-model";
+    public static final GenericModelDescribeOperationHandler INSTANCE = new GenericModelDescribeOperationHandler(OPERATION_NAME, false);
 
-    public static final GenericModelDescribeOperationHandler INSTANCE = new GenericModelDescribeOperationHandler("describe-model", false);
-
-    public static final SimpleOperationDefinition DEFINITION = new SimpleOperationDefinitionBuilder("describe-model", ControllerResolver.getResolver(SUBSYSTEM))
+    public static final SimpleOperationDefinition DEFINITION = new SimpleOperationDefinitionBuilder(OPERATION_NAME, ControllerResolver.getResolver(SUBSYSTEM))
             .addAccessConstraint(SensitiveTargetAccessConstraintDefinition.READ_WHOLE_CONFIG)
             .setReplyType(ModelType.LIST)
             .setReplyValueType(ModelType.OBJECT)
@@ -95,8 +95,8 @@ public class GenericModelDescribeOperationHandler implements OperationStepHandle
         final ModelNode result = context.getResult();
         result.setEmptyList();
         final ModelNode results = new ModelNode().setEmptyList();
-        final AtomicReference<ModelNode> failureRef = new AtomicReference<ModelNode>();
-        final Map<String, ModelNode> includeResults = new HashMap<String, ModelNode>();
+        final AtomicReference<ModelNode> failureRef = new AtomicReference<>();
+        final Map<String, ModelNode> includeResults = new HashMap<>();
 
         // Step to handle failed operations
         context.addStep(new OperationStepHandler() {
@@ -133,106 +133,93 @@ public class GenericModelDescribeOperationHandler implements OperationStepHandle
             }
         }, OperationContext.Stage.MODEL, true);
 
-        final Set<String> children = resource.getChildTypes();
-        for (final String childType : children) {
-            for (final Resource.ResourceEntry entry : resource.getChildren(childType)) {
-
-                final PathElement childPE = entry.getPathElement();
-                final PathAddress relativeChildAddress = PathAddress.EMPTY_ADDRESS.append(childPE);
-                final ImmutableManagementResourceRegistration childRegistration = registration.getSubModel(relativeChildAddress);
-
-                if (childRegistration.isRuntimeOnly()
-                        || childRegistration.isRemote()
-                        || childRegistration.isAlias()) {
-
-                    continue;
-                }
-
-                final PathAddress absoluteChildAddr = address.append(childPE);
-                // Skip ignored addresses
-                if (filter != null && !filter.accepts(absoluteChildAddr)) {
-                    continue;
-                }
-
-                final OperationStepHandler stepHandler = childRegistration.getOperationHandler(PathAddress.EMPTY_ADDRESS, operationName);
-                final ModelNode childRsp = new ModelNode();
-
-                context.addStep(new OperationStepHandler() {
-                    @Override
-                    public void execute(OperationContext context, ModelNode operation) throws OperationFailedException {
-                        if (failureRef.get() == null) {
-                            if (childRsp.hasDefined(FAILURE_DESCRIPTION)) {
-                                failureRef.set(childRsp.get(FAILURE_DESCRIPTION));
-                            } else if (childRsp.hasDefined(RESULT)) {
-                                addChildOperation(address, childRsp.require(RESULT).asList(), results);
-                            }
-                        }
-                    }
-                }, OperationContext.Stage.MODEL, true);
-
-                final ModelNode childOperation = operation.clone();
-                childOperation.get(ModelDescriptionConstants.OP).set(operationName);
-                childOperation.get(ModelDescriptionConstants.OP_ADDR).set(absoluteChildAddr.toModelNode());
-                context.addStep(childRsp, childOperation, stepHandler, OperationContext.Stage.MODEL, true);
-            }
-        }
-
+        describeChildren(resource, registration, filter, address, context, failureRef, results, operation);
         if (resource.isProxy() || resource.isRuntime()) {
             return;
         }
+        appendGenericOperation(resource, registration, includeResults, operation, address, context);
+    }
 
+    private void describeChildren(final Resource resource, final ImmutableManagementResourceRegistration registration, final PathAddressFilter filter, final PathAddress address, OperationContext context, final AtomicReference<ModelNode> failureRef, final ModelNode results, ModelNode operation) {
+        resource.getChildTypes().forEach((childType) -> {
+            resource.getChildren(childType).stream()
+                    .filter(entry -> {
+                        final ImmutableManagementResourceRegistration childRegistration = registration.getSubModel(PathAddress.EMPTY_ADDRESS.append(entry.getPathElement()));
+                        return !childRegistration.isRuntimeOnly() && !childRegistration.isRemote() && !childRegistration.isAlias();
+                    })
+                    .filter(entry ->  filter == null || filter.accepts(address.append(entry.getPathElement())))
+                    .forEach((entry) -> describeChildResource(entry, registration, address, context, failureRef, results, operation));
+        });
+    }
+
+    private void appendGenericOperation(final Resource resource, final ImmutableManagementResourceRegistration registration, final Map<String, ModelNode> includeResults, ModelNode operation, final PathAddress address, OperationContext context) throws OperationFailedException {
         // Generic operation generation
         final ModelNode model = resource.getModel();
-        final OperationStepHandler addHandler = registration.getOperationHandler(PathAddress.EMPTY_ADDRESS, ModelDescriptionConstants.ADD);
-        if (addHandler != null) {
-
-            final ModelNode add = new ModelNode();
-            add.get(ModelDescriptionConstants.OP).set(ModelDescriptionConstants.ADD);
-            add.get(ModelDescriptionConstants.OP_ADDR).set(address.toModelNode());
-            final Set<String> attributes = registration.getAttributeNames(PathAddress.EMPTY_ADDRESS);
-            for (final String attribute : attributes) {
-                if (!model.hasDefined(attribute)) {
-                    continue;
-                }
-
-                // Process attributes
-                final AttributeAccess attributeAccess = registration.getAttributeAccess(PathAddress.EMPTY_ADDRESS, attribute);
-                if (attributeAccess.getStorageType() == AttributeAccess.Storage.CONFIGURATION) {
-                    add.get(attribute).set(model.get(attribute));
-                }
-            }
-
-            // Allow the profile describe handler to process profile includes
-            processMore(context, operation, resource, address, includeResults);
-            if (!skipLocalAdd) {
-                addOrderedChildTypeInfo(context, resource, add);
-                result.add(add);
-            }
-
+        if (registration.getOperationHandler(PathAddress.EMPTY_ADDRESS, ModelDescriptionConstants.ADD) != null) {
+            appendAddResourceOperation(registration, includeResults, operation, address, context, resource);
         } else {
-            // Create write attribute operations
-            final Set<String> attributes = registration.getAttributeNames(PathAddress.EMPTY_ADDRESS);
-            for (final String attribute : attributes) {
-                if (!model.hasDefined(attribute)) {
-                    continue;
-                }
-                if (address.size() == 0 && !ROOT_ATTRIBUTES.contains(attribute)) {
-                    continue;
-                }
-                // Process attributes
-                final AttributeAccess attributeAccess = registration.getAttributeAccess(PathAddress.EMPTY_ADDRESS, attribute);
-                if (attributeAccess.getStorageType() == AttributeAccess.Storage.CONFIGURATION) {
-                    final ModelNode writeAttribute = new ModelNode();
-                    writeAttribute.get(ModelDescriptionConstants.OP).set(ModelDescriptionConstants.WRITE_ATTRIBUTE_OPERATION);
-                    writeAttribute.get(ModelDescriptionConstants.OP_ADDR).set(address.toModelNode());
+            registration.getAttributeNames(PathAddress.EMPTY_ADDRESS).stream()
+                    .filter(attribute -> model.hasDefined(attribute))
+                    .filter(attribute -> address.size() != 0 || ROOT_ATTRIBUTES.contains(attribute))
+                    .filter(attribute -> registration.getAttributeAccess(PathAddress.EMPTY_ADDRESS, attribute).getStorageType() == AttributeAccess.Storage.CONFIGURATION)
+                    .forEach(attribute -> appendWriteAttributeOperation(address, context, resource, attribute));
+        }
+    }
 
-                    writeAttribute.get(NAME).set(attribute);
-                    writeAttribute.get(VALUE).set(model.get(attribute));
-                    addOrderedChildTypeInfo(context, resource, writeAttribute);
-                    result.add(writeAttribute);
+    private void appendAddResourceOperation(final ImmutableManagementResourceRegistration registration,
+            final Map<String, ModelNode> includeResults, final ModelNode operation, final PathAddress address,
+            final OperationContext context, final Resource resource) throws OperationFailedException {
+        final ModelNode model = resource.getModel();
+        final ModelNode add = new ModelNode();
+        add.get(ModelDescriptionConstants.OP).set(ModelDescriptionConstants.ADD);
+        add.get(ModelDescriptionConstants.OP_ADDR).set(address.toModelNode());
+        registration.getAttributeNames(PathAddress.EMPTY_ADDRESS).stream()
+                    .filter(attribute -> model.hasDefined(attribute))
+                    .filter(attribute -> registration.getAttributeAccess(PathAddress.EMPTY_ADDRESS, attribute).getStorageType() == AttributeAccess.Storage.CONFIGURATION)
+                    .forEach(attribute -> add.get(attribute).set(model.get(attribute)));
+        // Allow the profile describe handler to process profile includes
+        processMore(context, operation, resource, address, includeResults);
+        if (!skipLocalAdd) {
+            addOrderedChildTypeInfo(context, resource, add);
+            context.getResult().add(add);
+        }
+    }
+
+    private void appendWriteAttributeOperation(final PathAddress address, final OperationContext context, final Resource resource, String attribute) {
+        final ModelNode model = resource.getModel();
+        final ModelNode writeAttribute = new ModelNode();
+        writeAttribute.get(ModelDescriptionConstants.OP).set(ModelDescriptionConstants.WRITE_ATTRIBUTE_OPERATION);
+        writeAttribute.get(ModelDescriptionConstants.OP_ADDR).set(address.toModelNode());
+        writeAttribute.get(NAME).set(attribute);
+        writeAttribute.get(VALUE).set(model.get(attribute));
+        addOrderedChildTypeInfo(context, resource, writeAttribute);
+        context.getResult().add(writeAttribute);
+    }
+
+    private void describeChildResource(final Resource.ResourceEntry entry,
+            final ImmutableManagementResourceRegistration registration, final PathAddress address,
+            OperationContext context, final AtomicReference<ModelNode> failureRef,
+            final ModelNode results, ModelNode operation) throws IllegalArgumentException {
+        final ModelNode childRsp = new ModelNode();
+        context.addStep(new OperationStepHandler() {
+            @Override
+            public void execute(OperationContext context, ModelNode operation) throws OperationFailedException {
+                if (failureRef.get() == null) {
+                    if (childRsp.hasDefined(FAILURE_DESCRIPTION)) {
+                        failureRef.set(childRsp.get(FAILURE_DESCRIPTION));
+                    } else if (childRsp.hasDefined(RESULT)) {
+                        addChildOperation(address, childRsp.require(RESULT).asList(), results);
+                    }
                 }
             }
-        }
+        }, OperationContext.Stage.MODEL, true);
+        final ModelNode childOperation = operation.clone();
+        childOperation.get(ModelDescriptionConstants.OP).set(operationName);
+        final PathElement childPE = entry.getPathElement();
+        childOperation.get(ModelDescriptionConstants.OP_ADDR).set(address.append(childPE).toModelNode());
+        final ImmutableManagementResourceRegistration childRegistration = registration.getSubModel(PathAddress.EMPTY_ADDRESS.append(childPE));
+        final OperationStepHandler stepHandler = childRegistration.getOperationHandler(PathAddress.EMPTY_ADDRESS, operationName);
+        context.addStep(childRsp, childOperation, stepHandler, OperationContext.Stage.MODEL, true);
     }
 
     private void addOrderedChildTypeInfo(OperationContext context, Resource resource, ModelNode operation) {
