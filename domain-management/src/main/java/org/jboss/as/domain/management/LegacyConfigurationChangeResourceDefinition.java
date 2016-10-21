@@ -45,13 +45,16 @@ import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.OperationStepHandler;
 import org.jboss.as.controller.PathAddress;
 import org.jboss.as.controller.PathElement;
+import org.jboss.as.controller.ProcessType;
 import org.jboss.as.controller.ResourceDefinition;
+import org.jboss.as.controller.RunningMode;
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
 import org.jboss.as.controller.SimpleOperationDefinitionBuilder;
 import org.jboss.as.controller.SimpleResourceDefinition;
 import org.jboss.as.controller.access.Action;
 import org.jboss.as.controller.access.AuthorizationResult;
+import org.jboss.as.controller.capability.RuntimeCapability;
 import org.jboss.as.controller.descriptions.ModelDescriptionConstants;
 import org.jboss.as.controller.logging.ControllerLogger;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
@@ -61,21 +64,27 @@ import org.jboss.as.domain.management._private.DomainManagementResolver;
 import org.jboss.as.domain.management.logging.DomainManagementLogger;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
+import org.jboss.msc.service.AbstractService;
 
 /**
  * Resource to list all configuration changes.
  *
  * @author <a href="mailto:ehugonne@redhat.com">Emmanuel Hugonnet</a> (c) 2015 Red Hat, inc.
  */
-public class ConfigurationChangeResourceDefinition extends SimpleResourceDefinition {
+public class LegacyConfigurationChangeResourceDefinition extends SimpleResourceDefinition {
 
     public static final SimpleAttributeDefinition MAX_HISTORY = SimpleAttributeDefinitionBuilder.create(
             ModelDescriptionConstants.MAX_HISTORY, ModelType.INT, true)
             .setDefaultValue(new ModelNode(10))
             .build();
     public static final PathElement PATH = PathElement.pathElement(SERVICE, CONFIGURATION_CHANGES);
-    public static final ConfigurationChangeResourceDefinition INSTANCE = new ConfigurationChangeResourceDefinition();
     public static final String OPERATION_NAME = "list-changes";
+    static final String CONFIGURATION_CHANGES_CAPABILITY_NAME = "org.wildfly.management.configuration.changes";
+    public static final RuntimeCapability<Void> CONFIGURATION_CHANGES_CAPABILITY = RuntimeCapability.Builder
+            .of(CONFIGURATION_CHANGES_CAPABILITY_NAME, false, Void.class)
+            .build();
+
+    public static final LegacyConfigurationChangeResourceDefinition INSTANCE = new LegacyConfigurationChangeResourceDefinition();
 
     static ResourceDefinition forDomain() {
         return new SimpleResourceDefinition(new Parameters(PATH, DomainManagementResolver.getResolver(CORE, MANAGEMENT, SERVICE, CONFIGURATION_CHANGES))
@@ -91,58 +100,78 @@ public class ConfigurationChangeResourceDefinition extends SimpleResourceDefinit
                 .setDeprecatedSince(ModelVersion.create(4, 2)));
     }
 
-    private ConfigurationChangeResourceDefinition() {
+    private LegacyConfigurationChangeResourceDefinition() {
         super(new Parameters(PATH, DomainManagementResolver.getResolver(CORE, MANAGEMENT, SERVICE, CONFIGURATION_CHANGES))
-                .setAddHandler(new ConfigurationChangeResourceAddHandler())
-                .setRemoveHandler(new ConfigurationChangeResourceRemoveHandler()));
+                .setAddHandler(new LegacyConfigurationChangeResourceAddHandler())
+                .setRemoveHandler(new LegacyConfigurationChangeResourceRemoveHandler()));
     }
 
     @Override
     public void registerOperations(ManagementResourceRegistration resourceRegistration) {
         super.registerOperations(resourceRegistration);
-        resourceRegistration.registerOperationHandler(ConfigurationChangesHandler.DEFINITION, ConfigurationChangesHandler.INSTANCE);
+        resourceRegistration.registerOperationHandler(LegacyConfigurationChangesHandler.DEFINITION, LegacyConfigurationChangesHandler.INSTANCE);
     }
 
     @Override
     public void registerAttributes(ManagementResourceRegistration resourceRegistration) {
         super.registerAttributes(resourceRegistration);
-        resourceRegistration.registerReadWriteAttribute(MAX_HISTORY, null, new MaxHistoryWriteHandler(ConfigurationChangesCollector.INSTANCE));
+        resourceRegistration.registerReadWriteAttribute(MAX_HISTORY, null, new LegacyMaxHistoryWriteHandler(ConfigurationChangesCollector.INSTANCE));
     }
 
-    private static class ConfigurationChangeResourceAddHandler extends AbstractAddStepHandler {
-        public ConfigurationChangeResourceAddHandler() {
-            super(MAX_HISTORY);
+    private static class LegacyConfigurationChangeResourceAddHandler extends AbstractAddStepHandler {
+        private LegacyConfigurationChangeResourceAddHandler() {
+            super(CONFIGURATION_CHANGES_CAPABILITY, MAX_HISTORY);
         }
 
         @Override
         protected void populateModel(OperationContext context, ModelNode operation, Resource resource) throws OperationFailedException {
             super.populateModel(context, operation, resource);
-            ModelNode maxHistory = MAX_HISTORY.resolveModelAttribute(context, operation);
             MAX_HISTORY.validateAndSet(operation, context.readResourceForUpdate(PathAddress.EMPTY_ADDRESS).getModel());
+        }
+
+        @Override
+        protected void performRuntime(OperationContext context, ModelNode operation, Resource resource) throws OperationFailedException {
+            super.performRuntime(context, operation, resource);
+            ModelNode maxHistory = MAX_HISTORY.resolveModelAttribute(context, operation);
+            context.getServiceTarget().addService(CONFIGURATION_CHANGES_CAPABILITY.getCapabilityServiceName(), new AbstractService<Void>() {}).install();
             ConfigurationChangesCollector.INSTANCE.setMaxHistory(maxHistory.asInt());
+        }
+
+        @Override
+        protected boolean requiresRuntime(OperationContext context) {
+            return context.getProcessType() != ProcessType.EMBEDDED_HOST_CONTROLLER
+                    && (context.getProcessType() != ProcessType.EMBEDDED_SERVER
+                    && context.getRunningMode() != RunningMode.ADMIN_ONLY);
         }
 
     }
 
-    private static class ConfigurationChangeResourceRemoveHandler extends AbstractRemoveStepHandler {
+    private static class LegacyConfigurationChangeResourceRemoveHandler extends AbstractRemoveStepHandler {
+
+        private LegacyConfigurationChangeResourceRemoveHandler() {
+            super(CONFIGURATION_CHANGES_CAPABILITY);
+        }
 
         @Override
         protected boolean requiresRuntime(OperationContext context) {
-            return true;
+            return context.getProcessType() != ProcessType.EMBEDDED_HOST_CONTROLLER
+                    && (context.getProcessType() != ProcessType.EMBEDDED_SERVER
+                    && context.getRunningMode() != RunningMode.ADMIN_ONLY);
         }
 
         @Override
         protected void performRuntime(OperationContext context, ModelNode operation, ModelNode model) throws OperationFailedException {
             super.performRuntime(context, operation, model);
             ConfigurationChangesCollector.INSTANCE.deactivate();
+            context.removeService(CONFIGURATION_CHANGES_CAPABILITY.getCapabilityServiceName());
         }
     }
 
-    private static class MaxHistoryWriteHandler extends AbstractWriteAttributeHandler<Integer> {
+    private static class LegacyMaxHistoryWriteHandler extends AbstractWriteAttributeHandler<Integer> {
 
         private final ConfigurationChangesCollector collector;
 
-        private MaxHistoryWriteHandler(ConfigurationChangesCollector collector) {
+        private LegacyMaxHistoryWriteHandler(ConfigurationChangesCollector collector) {
             super(MAX_HISTORY);
             this.collector = collector;
         }
@@ -150,7 +179,7 @@ public class ConfigurationChangeResourceDefinition extends SimpleResourceDefinit
         @Override
         protected boolean applyUpdateToRuntime(OperationContext context, ModelNode operation, String attributeName, ModelNode resolvedValue, ModelNode currentValue, HandbackHolder<Integer> handbackHolder) throws OperationFailedException {
             collector.setMaxHistory(resolvedValue.asInt());
-            return true;
+            return false;
         }
 
         @Override
@@ -159,20 +188,20 @@ public class ConfigurationChangeResourceDefinition extends SimpleResourceDefinit
         }
     }
 
-    private static class ConfigurationChangesHandler extends AbstractRuntimeOnlyHandler {
+    private static class LegacyConfigurationChangesHandler extends AbstractRuntimeOnlyHandler {
 
         private static final OperationDefinition DEFINITION = new SimpleOperationDefinitionBuilder(OPERATION_NAME,
                 DomainManagementResolver.getResolver(CORE, MANAGEMENT, SERVICE, CONFIGURATION_CHANGES))
                 .setReplyType(ModelType.STRING)
                 .setRuntimeOnly()
                 .build();
-        private static final ConfigurationChangesHandler INSTANCE = new ConfigurationChangesHandler(ConfigurationChangesCollector.INSTANCE);
+        private static final LegacyConfigurationChangesHandler INSTANCE = new LegacyConfigurationChangesHandler(ConfigurationChangesCollector.INSTANCE);
         private static final Set<Action.ActionEffect> ADDRESS_EFFECT = EnumSet.of(Action.ActionEffect.ADDRESS);
         private static final Set<Action.ActionEffect> READ_EFFECT = EnumSet.of(Action.ActionEffect.READ_CONFIG, Action.ActionEffect.READ_RUNTIME);
 
         private final ConfigurationChangesCollector collector;
 
-        private ConfigurationChangesHandler(ConfigurationChangesCollector collector) {
+        private LegacyConfigurationChangesHandler(ConfigurationChangesCollector collector) {
             this.collector = collector;
         }
 

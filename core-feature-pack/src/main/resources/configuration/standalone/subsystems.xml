@@ -5,5 +5,6 @@
       <subsystem>logging.xml</subsystem>
       <subsystem>jmx.xml</subsystem>
       <subsystem>request-controller.xml</subsystem>
+      <subsystem>core-management.xml</subsystem>
    </subsystems>
 </config>

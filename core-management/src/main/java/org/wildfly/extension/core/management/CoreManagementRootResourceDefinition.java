@@ -28,6 +28,7 @@ import java.util.Collections;
 import org.jboss.as.controller.AttributeDefinition;
 import org.jboss.as.controller.PersistentResourceDefinition;
 import org.jboss.as.controller.ReloadRequiredRemoveStepHandler;
+import org.jboss.as.controller.registry.ManagementResourceRegistration;
 
 /**
  * {@link org.jboss.as.controller.ResourceDefinition} for the core-management subsystem root resource.
@@ -47,4 +48,12 @@ class CoreManagementRootResourceDefinition extends PersistentResourceDefinition 
     public Collection<AttributeDefinition> getAttributes() {
         return Collections.emptyList();
     }
+
+    @Override
+    public void registerChildren(ManagementResourceRegistration resourceRegistration) {
+        super.registerChildren(resourceRegistration);
+        // Configuration Changes
+        resourceRegistration.registerSubModel(ConfigurationChangeResourceDefinition.INSTANCE);
+    }
+
 }
