@@ -448,10 +448,10 @@ public class ExplodedDeploymentTestCase {
         deploymentExecutor.addContent();
         deploymentExecutor.readContent("SimpleTest.properties", "is added");
         deploymentExecutor.browseContent("", new ArrayList<>(Arrays.asList("META-INF/", "META-INF/MANIFEST.MF",
-                "META-INF/services/", "META-INF/services/org.jboss.msc.service.ServiceActivator",
+                "META-INF/permissions.xml", "META-INF/services/", "META-INF/services/org.jboss.msc.service.ServiceActivator",
                 "org/","org/jboss/","org/jboss/as/", "org/jboss/as/test/", "org/jboss/as/test/deployment/",
                 "org/jboss/as/test/deployment/trivial/", "service-activator-deployment.properties",
-                "org/jboss/as/test/deployment/trivial/ServiceActivatorDeployment.class",  "SimpleTest.properties")));
+                "org/jboss/as/test/deployment/trivial/ServiceActivatorDeployment.class", "SimpleTest.properties")));
         if (!fromFile) {
             Set<String> currentHashes = getAllDeploymentHashesFromContentDir(false);
             Assert.assertFalse(currentHashes.contains(initialDeploymentHash)); //Should have been deleted when added

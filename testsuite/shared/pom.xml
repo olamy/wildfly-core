@@ -165,6 +165,11 @@
             <artifactId>byteman</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.io7m.xom</groupId>
+            <artifactId>xom</artifactId>
+            <version>1.2.10.redhat-1</version>
+        </dependency>
     </dependencies>
 
 </project>
