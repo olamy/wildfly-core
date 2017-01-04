@@ -74,7 +74,7 @@ public class ServiceActivatorDeploymentUtil {
         archive.addClass(ServiceActivatorDeployment.class);
         archive.addAsServiceProvider(ServiceActivator.class, ServiceActivatorDeployment.class);
         archive.addAsManifestResource(PermissionUtils.createPermissionsXmlAsset(
-                new PropertyPermission("test.deployment.trivial.prop", "write")),
+                new PropertyPermission("test.deployment.trivial.prop", "write"), new PropertyPermission("service", "write")),
                 "permissions.xml");
         if (properties != null && properties.size() > 0) {
             StringBuilder sb = new StringBuilder();

@@ -26,6 +26,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.Permission;
 
 import org.jboss.shrinkwrap.api.asset.Asset;
@@ -41,6 +42,10 @@ import nu.xom.Serializer;
  */
 public final class PermissionUtils {
     public static Asset createPermissionsXmlAsset(Permission... permissions) {
+        return new StringAsset(new String(createPermissionsXml(permissions), StandardCharsets.UTF_8));
+    }
+
+    public static byte[] createPermissionsXml(Permission... permissions) {
         final Element permissionsElement = new Element("permissions");
         permissionsElement.setNamespaceURI("http://xmlns.jcp.org/xml/ns/javaee");
         permissionsElement.addAttribute(new Attribute("version", "7"));
@@ -69,7 +74,7 @@ public final class PermissionUtils {
             serializer.setLineSeparator("\n");
             serializer.write(document);
             serializer.flush();
-            return new StringAsset(stream.toString("UTF-8"));
+            return stream.toByteArray();
         } catch (IOException e) {
             throw new IllegalStateException("Generating permissions.xml failed", e);
         }

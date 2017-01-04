@@ -168,7 +168,17 @@
         <dependency>
             <groupId>com.io7m.xom</groupId>
             <artifactId>xom</artifactId>
-            <version>1.2.10.redhat-1</version>
+            <version>1.2.10</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>xalan</groupId>
+                    <artifactId>xalan</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>xml-apis</groupId>
+                    <artifactId>xml-apis</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 
