@@ -66,7 +66,7 @@ public class NativeManagementResourceDefinition extends BaseNativeInterfaceResou
             .setAddHandler(new NativeManagementAddHandler(hostControllerInfo))
             .setRemoveHandler(NativeManagementRemoveHandler.INSTANCE)
             .setAddRestartLevel(OperationEntry.Flag.RESTART_NONE)
-            .setRemoveRestartLevel(OperationEntry.Flag.RESTART_RESOURCE_SERVICES));
+            .setRemoveRestartLevel(OperationEntry.Flag.RESTART_ALL_SERVICES));
     }
 
     @Override

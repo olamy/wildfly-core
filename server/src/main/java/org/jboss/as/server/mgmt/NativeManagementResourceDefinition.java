@@ -56,7 +56,7 @@ public class NativeManagementResourceDefinition extends BaseNativeInterfaceResou
     public static final SimpleAttributeDefinition SOCKET_BINDING = new SimpleAttributeDefinitionBuilder(ModelDescriptionConstants.SOCKET_BINDING, ModelType.STRING, false)
             .setXmlName(Attribute.NATIVE.getLocalName())
             .setValidator(new StringLengthValidator(1, Integer.MAX_VALUE, true, false))
-            .setFlags(AttributeAccess.Flag.RESTART_RESOURCE_SERVICES)
+            .setFlags(AttributeAccess.Flag.RESTART_ALL_SERVICES)
             .addAccessConstraint(new SensitiveTargetAccessConstraintDefinition(SensitivityClassification.SOCKET_CONFIG))
             .setCapabilityReference(SOCKET_BINDING_CAPABILITY_NAME, NATIVE_MANAGEMENT_RUNTIME_CAPABILITY)
             .build();
@@ -70,7 +70,7 @@ public class NativeManagementResourceDefinition extends BaseNativeInterfaceResou
             .setAddHandler(NativeManagementAddHandler.INSTANCE)
             .setRemoveHandler(NativeManagementRemoveHandler.INSTANCE)
             .setAddRestartLevel(OperationEntry.Flag.RESTART_NONE)
-            .setRemoveRestartLevel(OperationEntry.Flag.RESTART_RESOURCE_SERVICES));
+            .setRemoveRestartLevel(OperationEntry.Flag.RESTART_ALL_SERVICES));
     }
 
     @Override

@@ -69,7 +69,7 @@ public abstract class BaseNativeInterfaceResourceDefinition extends SimpleResour
         .setRequires(ModelDescriptionConstants.SECURITY_REALM)
         .setAllowExpression(true)
         .setValidator(new StringLengthValidator(1, Integer.MAX_VALUE, true, true))
-        .setFlags(AttributeAccess.Flag.RESTART_RESOURCE_SERVICES)
+        .setFlags(AttributeAccess.Flag.RESTART_ALL_SERVICES)
         .setDeprecated(ModelVersion.create(5))
         .build();
 
@@ -78,19 +78,19 @@ public abstract class BaseNativeInterfaceResourceDefinition extends SimpleResour
         .setAllowExpression(true)
         .setValidator(new StringLengthValidator(1, Integer.MAX_VALUE, true, true))
         .setDefaultValue(new ModelNode(ModelDescriptionConstants.REMOTE))
-        .setFlags(AttributeAccess.Flag.RESTART_RESOURCE_SERVICES)
+        .setFlags(AttributeAccess.Flag.RESTART_ALL_SERVICES)
         .setDeprecated(ModelVersion.create(5))
         .build();
 
     public static final SimpleAttributeDefinition SASL_AUTHENTICATION_FACTORY = new SimpleAttributeDefinitionBuilder(ModelDescriptionConstants.SASL_AUTHENTICATION_FACTORY, ModelType.STRING, true)
         .setMinSize(1)
-        .setFlags(AttributeAccess.Flag.RESTART_RESOURCE_SERVICES)
+        .setFlags(AttributeAccess.Flag.RESTART_ALL_SERVICES)
         .setCapabilityReference(SASL_AUTHENTICATION_FACTORY_CAPABILITY, NATIVE_MANAGEMENT_RUNTIME_CAPABILITY)
         .build();
 
     public static final SimpleAttributeDefinition SSL_CONTEXT = new SimpleAttributeDefinitionBuilder(ModelDescriptionConstants.SSL_CONTEXT, ModelType.STRING, true)
         .setMinSize(1)
-        .setFlags(AttributeAccess.Flag.RESTART_RESOURCE_SERVICES)
+        .setFlags(AttributeAccess.Flag.RESTART_ALL_SERVICES)
         .setCapabilityReference(SSL_CONTEXT_CAPABILITY, NATIVE_MANAGEMENT_RUNTIME_CAPABILITY)
         .build();
 

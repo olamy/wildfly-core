@@ -70,7 +70,7 @@ public abstract class BaseHttpInterfaceResourceDefinition extends SimpleResource
 
     public static final SimpleAttributeDefinition HTTP_AUTHENTICATION_FACTORY = new SimpleAttributeDefinitionBuilder(ModelDescriptionConstants.HTTP_AUTHENTICATION_FACTORY, ModelType.STRING, true)
         .setMinSize(1)
-        .setFlags(AttributeAccess.Flag.RESTART_RESOURCE_SERVICES)
+        .setFlags(AttributeAccess.Flag.RESTART_ALL_SERVICES)
         .setCapabilityReference(HTTP_AUTHENTICATION_FACTORY_CAPABILITY, HTTP_MANAGEMENT_RUNTIME_CAPABILITY)
         .build();
 
@@ -83,7 +83,7 @@ public abstract class BaseHttpInterfaceResourceDefinition extends SimpleResource
 
     public static final SimpleAttributeDefinition SSL_CONTEXT = new SimpleAttributeDefinitionBuilder(ModelDescriptionConstants.SSL_CONTEXT, ModelType.STRING, true)
         .setMinSize(1)
-        .setFlags(AttributeAccess.Flag.RESTART_RESOURCE_SERVICES)
+        .setFlags(AttributeAccess.Flag.RESTART_ALL_SERVICES)
         .setCapabilityReference(SSL_CONTEXT_CAPABILITY, HTTP_MANAGEMENT_RUNTIME_CAPABILITY)
         .build();
 
@@ -91,11 +91,13 @@ public abstract class BaseHttpInterfaceResourceDefinition extends SimpleResource
         .setAllowExpression(true)
         .setXmlName(Attribute.CONSOLE_ENABLED.getLocalName())
         .setDefaultValue(new ModelNode(true))
+        .setFlags(AttributeAccess.Flag.RESTART_ALL_SERVICES)
         .build();
 
     public static final SimpleAttributeDefinition HTTP_UPGRADE_ENABLED = new SimpleAttributeDefinitionBuilder(ModelDescriptionConstants.HTTP_UPGRADE_ENABLED, ModelType.BOOLEAN, true)
         .setXmlName(Attribute.HTTP_UPGRADE_ENABLED.getLocalName())
         .setDeprecated(ModelVersion.create(5), true)
+        .setFlags(AttributeAccess.Flag.RESTART_ALL_SERVICES)
         .build();
 
     public static final SimpleAttributeDefinition ENABLED = new SimpleAttributeDefinitionBuilder(ModelDescriptionConstants.ENABLED, ModelType.BOOLEAN, true)
@@ -104,17 +106,18 @@ public abstract class BaseHttpInterfaceResourceDefinition extends SimpleResource
 
     public static final SimpleAttributeDefinition SASL_AUTHENTICATION_FACTORY = new SimpleAttributeDefinitionBuilder(ModelDescriptionConstants.SASL_AUTHENTICATION_FACTORY, ModelType.STRING, true)
         .setMinSize(1)
-        .setFlags(AttributeAccess.Flag.RESTART_RESOURCE_SERVICES)
+        .setFlags(AttributeAccess.Flag.RESTART_ALL_SERVICES)
         .setCapabilityReference(SASL_AUTHENTICATION_FACTORY_CAPABILITY, HTTP_MANAGEMENT_RUNTIME_CAPABILITY)
         .build();
 
     public static final ObjectTypeAttributeDefinition HTTP_UPGRADE = new ObjectTypeAttributeDefinition.Builder(ModelDescriptionConstants.HTTP_UPGRADE, ENABLED, SASL_AUTHENTICATION_FACTORY)
+        .setFlags(AttributeAccess.Flag.RESTART_ALL_SERVICES)
         .build();
 
     public static final SimpleAttributeDefinition SERVER_NAME = new SimpleAttributeDefinitionBuilder(ModelDescriptionConstants.SERVER_NAME, ModelType.STRING, true)
         .setAllowExpression(true)
         .setValidator(new StringLengthValidator(1, Integer.MAX_VALUE, true, true))
-        .setFlags(AttributeAccess.Flag.RESTART_RESOURCE_SERVICES)
+        .setFlags(AttributeAccess.Flag.RESTART_ALL_SERVICES)
         .setDeprecated(ModelVersion.create(5))
         .build();
 
@@ -122,7 +125,7 @@ public abstract class BaseHttpInterfaceResourceDefinition extends SimpleResource
         .setAllowExpression(true)
         .setValidator(new StringLengthValidator(1, Integer.MAX_VALUE, true, true))
         .setDefaultValue(new ModelNode(ModelDescriptionConstants.REMOTE))
-        .setFlags(AttributeAccess.Flag.RESTART_RESOURCE_SERVICES)
+        .setFlags(AttributeAccess.Flag.RESTART_ALL_SERVICES)
         .setDeprecated(ModelVersion.create(5))
         .build();
 
@@ -131,7 +134,7 @@ public abstract class BaseHttpInterfaceResourceDefinition extends SimpleResource
         .setAllowNull(true)
         .setValidator(new StringLengthValidator(1, Integer.MAX_VALUE, true, false))
         .setAttributeMarshaller(AttributeMarshaller.STRING_LIST)
-        .setFlags(AttributeAccess.Flag.RESTART_RESOURCE_SERVICES)
+        .setFlags(AttributeAccess.Flag.RESTART_ALL_SERVICES)
         .build();
 
     protected static final AttributeDefinition[] COMMON_ATTRIBUTES = new AttributeDefinition[] { HTTP_AUTHENTICATION_FACTORY, SSL_CONTEXT, SECURITY_REALM, CONSOLE_ENABLED, HTTP_UPGRADE_ENABLED,
