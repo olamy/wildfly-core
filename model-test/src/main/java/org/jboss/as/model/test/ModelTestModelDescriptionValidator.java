@@ -35,6 +35,7 @@ import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.CHI
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.DEFAULT;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.DEPRECATED;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.DESCRIPTION;
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.DISPLAY_NAME;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.DYNAMIC;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.EXPRESSIONS_ALLOWED;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.FILESYSTEM_PATH;
@@ -126,6 +127,7 @@ public class ModelTestModelDescriptionValidator {
         validChildTypeKeys.put(ALLOWED, StringListValidator.INSTANCE);
         validChildTypeKeys.put(FILESYSTEM_PATH, BooleanDescriptorValidator.INSTANCE);
         validChildTypeKeys.put(ATTACHED_STREAMS, BooleanDescriptorValidator.INSTANCE);
+        validChildTypeKeys.put(DISPLAY_NAME, NullDescriptorValidator.INSTANCE);
         validChildTypeKeys.put(RELATIVE_TO, BooleanDescriptorValidator.INSTANCE);
         validChildTypeKeys.put(WEB_URL, BooleanDescriptorValidator.INSTANCE);
         VALID_CHILD_TYPE_KEYS = Collections.unmodifiableMap(validChildTypeKeys);
@@ -143,6 +145,7 @@ public class ModelTestModelDescriptionValidator {
         paramAndAttributeKeys.put(ATTRIBUTE_GROUP, NullDescriptorValidator.INSTANCE);
         paramAndAttributeKeys.put(FILESYSTEM_PATH, BooleanDescriptorValidator.INSTANCE);
         paramAndAttributeKeys.put(ATTACHED_STREAMS, BooleanDescriptorValidator.INSTANCE);
+        paramAndAttributeKeys.put(DISPLAY_NAME, NullDescriptorValidator.INSTANCE);
         paramAndAttributeKeys.put(RELATIVE_TO, BooleanDescriptorValidator.INSTANCE);
         paramAndAttributeKeys.put(REQUIRES, StringListValidator.INSTANCE);
         paramAndAttributeKeys.put(MIN, NumericDescriptorValidator.INSTANCE);

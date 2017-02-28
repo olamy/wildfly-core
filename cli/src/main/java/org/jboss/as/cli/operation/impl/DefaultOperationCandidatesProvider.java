@@ -21,6 +21,8 @@
  */
 package org.jboss.as.cli.operation.impl;
 
+import static org.jboss.as.cli.Util.DISPLAY_NAME;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -252,8 +254,10 @@ public class DefaultOperationCandidatesProvider implements OperationCandidatesPr
                 result = new ArrayList<CommandArgument>(propList.size());
                 for(final Property prop : propList) {
                     final CommandLineCompleter completer = getCompleter(globalOpProps, prop, ctx, operationName, address);
+                    boolean hasAlias = prop.getValue().hasDefined(DISPLAY_NAME);
                     result.add(new CommandArgument(){
-                        final String argName = prop.getName();
+                        final String argName = hasAlias ?  prop.getValue().get(DISPLAY_NAME).asString() : prop.getName();
+                        final String shortName = hasAlias ? prop.getName() : null;
                         @Override
                         public String getFullName() {
                             return argName;
@@ -261,7 +265,7 @@ public class DefaultOperationCandidatesProvider implements OperationCandidatesPr
 
                         @Override
                         public String getShortName() {
-                            return null;
+                            return shortName;
                         }
 
                         @Override

@@ -25,6 +25,7 @@ import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.ATT
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.DEPLOYMENT;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.DEPLOYMENT_DEPLOYED_NOTIFICATION;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.DEPLOYMENT_UNDEPLOYED_NOTIFICATION;
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.DISPLAY_NAME;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.FILESYSTEM_PATH;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.RELATIVE_TO;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.UUID;
@@ -169,6 +170,7 @@ public class DeploymentAttributes {
                     ModelDescriptionConstants.PATH, ModelDescriptionConstants.RELATIVE_TO, ModelDescriptionConstants.EMPTY)
             .addArbitraryDescriptor(FILESYSTEM_PATH, new ModelNode(true))
             .addArbitraryDescriptor(ATTACHED_STREAMS, new ModelNode(true))
+            .addArbitraryDescriptor(DISPLAY_NAME, new ModelNode("input"))
             .build();
 
     public static final SimpleAttributeDefinition CONTENT_HASH =

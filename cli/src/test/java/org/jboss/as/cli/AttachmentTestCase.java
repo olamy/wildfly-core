@@ -21,6 +21,7 @@
  */
 package org.jboss.as.cli;
 
+import java.util.Collections;
 import org.jboss.dmr.ModelNode;
 import org.junit.Assert;
 import org.junit.Test;
@@ -237,7 +238,7 @@ public class AttachmentTestCase {
         Attachments attachments = new Attachments();
         CommandContext ctx = CommandContextFactory.getInstance().newCommandContext();
         for (String k : value.keys()) {
-            Util.applyReplacements(ctx, k, value.get(k), req.get(k), req.get(k).get(Util.TYPE).asType(), attachments);
+            Util.applyReplacements(ctx, k, value.get(k), req.get(k), req.get(k).get(Util.TYPE).asType(), attachments, Collections.emptyMap());
         }
         Assert.assertEquals("Should be equal", expected, value);
         Assert.assertEquals(11, attachments.getAttachedFiles().size());
@@ -256,7 +257,7 @@ public class AttachmentTestCase {
         Attachments attachments = new Attachments();
         CommandContext ctx = CommandContextFactory.getInstance().newCommandContext();
         for (String k : value.keys()) {
-            Util.applyReplacements(ctx, k, value.get(k), req.get(k), req.get(k).get(Util.TYPE).asType(), attachments);
+            Util.applyReplacements(ctx, k, value.get(k), req.get(k), req.get(k).get(Util.TYPE).asType(), attachments, Collections.emptyMap());
         }
     }
 }

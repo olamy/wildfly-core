@@ -21,6 +21,8 @@
  */
 package org.jboss.as.cli.impl;
 
+import static org.jboss.as.cli.Util.DISPLAY_NAME;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -48,6 +50,7 @@ import org.jboss.as.cli.parsing.WordCharacterHandler;
 import org.jboss.as.cli.parsing.arguments.ArgumentValueState;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
+import org.jboss.dmr.Property;
 import org.jboss.logging.Logger;
 import org.jboss.logging.Logger.Level;
 
@@ -56,6 +59,18 @@ import org.jboss.logging.Logger.Level;
  *
  */
 public class ValueTypeCompleter implements CommandLineCompleter {
+
+    private List<String> getCandidatesFromTypeDescription(ModelNode propType) {
+        final List<String> candidates = new ArrayList<>(propType.keys().size());
+        for (Property prop : propType.asPropertyList()) {
+            if (prop.getValue().hasDefined(DISPLAY_NAME)) {
+                candidates.add(prop.getValue().get(DISPLAY_NAME).asString());
+            } else {
+                candidates.add(prop.getName());
+            }
+        }
+        return candidates;
+    }
 
     /**
      * Instance is the Model of the parsed Value. It contains the tree of
@@ -653,7 +668,8 @@ public class ValueTypeCompleter implements CommandLineCompleter {
                 if (!isObject(propType)) {
                     return Collections.<String>emptyList();
                 }
-                for (String p : propType.keys()) {
+                final List<String> allCandidates = getCandidatesFromTypeDescription(propType);
+                for (String p : allCandidates) {
                     if (p.startsWith(last.name) && !currentInstance.contains(p)) {
                         candidates.add(p);
                     }
@@ -735,11 +751,20 @@ public class ValueTypeCompleter implements CommandLineCompleter {
 
         // if a value is already present and complete (eg: true/false, allowed
         // returns true. Otherwise returns false.
-        private boolean getSimpleValues(ModelNode propType, String name,
-                String radical, List<String> candidates) {
+        private boolean getSimpleValues(ModelNode currentType, String name, String radical, List<String> candidates) {
+            ModelNode propType = currentType.clone();
             // name could be null of List properties
             if (name != null) {
-                propType = propType.get(name);
+                if (propType.hasDefined(name)) {
+                    propType = propType.get(name);
+                } else {
+                    for (Property prop : propType.asPropertyList()) {
+                        if (prop.getValue().hasDefined(DISPLAY_NAME) && name.equals(prop.getValue().get(DISPLAY_NAME).asString())) {
+                            propType = prop.getValue();
+                            break;
+                        }
+                    }
+                }
             }
             final List<ModelNode> allowed;
             if (!propType.has(Util.ALLOWED)) {
@@ -828,7 +853,7 @@ public class ValueTypeCompleter implements CommandLineCompleter {
                 // or a Map<String, 'propType'>;
                 if (propType.getType() == ModelType.OBJECT) {
                     // This is inside an instance.
-                    final List<String> candidates = new ArrayList<>(propType.keys());
+                    final List<String> candidates = getCandidatesFromTypeDescription(propType);
                     // Remove the properties already present
                     for (Instance.Property p : currentInstance.properties) {
                         candidates.remove(p.name);

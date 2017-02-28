@@ -163,6 +163,7 @@ public class CLIWrapper implements AutoCloseable {
             try {
                 ctx.handle(line);
             } catch (CommandLineException e) {
+                e.printStackTrace();
                 Assert.fail("Failed to execute line '" + line + "': " + e.toString());
             }
         }

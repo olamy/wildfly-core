@@ -149,6 +149,7 @@ public class ModelDescriptionConstants {
     public static final String DISABLED_DUE_TO_FAILURE = "disabled-due-to-failure";
     public static final String DISCOVERY_OPTION = "discovery-option";
     public static final String DISCOVERY_OPTIONS = "discovery-options";
+    public static final String DISPLAY_NAME = "display-name";
     public static final String DOMAIN = "domain";
     public static final String DOMAIN_CONFIG = "domain-config";
     public static final String DOMAIN_CONTROLLER = "domain-controller";

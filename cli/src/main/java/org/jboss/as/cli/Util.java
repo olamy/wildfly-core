@@ -95,6 +95,7 @@ public class Util {
     public static final String DEPLOYMENT_OVERLAY = "deployment-overlay";
     public static final String DEPTH = "depth";
     public static final String DESCRIPTION = "description";
+    public static final String DISPLAY_NAME = "display-name";
     public static final String DOMAIN_FAILURE_DESCRIPTION = "domain-failure-description";
     public static final String DOMAIN_RESULTS = "domain-results";
     public static final String DRIVER_MODULE_NAME = "driver-module-name";
@@ -1093,6 +1094,20 @@ public class Util {
         return toOperationRequest(ctx, parsedLine, new Attachments(), false);
     }
 
+     private static void listAliases(ModelNode outcome, Map<String, String> aliases) {
+        try {
+            for (Property prop : outcome.asPropertyList()) {
+                if (prop.getValue().hasDefined(DISPLAY_NAME)) {
+                    aliases.put(prop.getValue().get(DISPLAY_NAME).asString(), prop.getName());
+                } else if (prop.getValue().hasDefined(VALUE_TYPE)) {
+                    listAliases(prop.getValue().get(VALUE_TYPE), aliases);
+                }
+            }
+        } catch (IllegalArgumentException ex) {//Can't be converted as a PropertyList
+            return;
+        }
+    }
+
     private static ModelNode toOperationRequest(CommandContext ctx,
             ParsedCommandLine parsedLine, Attachments attachments,
             boolean description)
@@ -1124,6 +1139,7 @@ public class Util {
         }
         request.get(Util.OPERATION).set(operationName);
         ModelNode outcome = null;
+        Map<String, String> aliases = new HashMap<>();
         if (description) {
             outcome = (ModelNode) ctx.get(Scope.REQUEST, DESCRIPTION_RESPONSE);
             if (outcome == null) {
@@ -1137,7 +1153,9 @@ public class Util {
                     throw new CommandFormatException("Failed to perform " + Util.READ_OPERATION_DESCRIPTION
                             + " to validate the request: result is not available.");
                 } else {
-                    outcome = outcome.get(Util.RESULT).get(Util.REQUEST_PROPERTIES);
+                    outcome= outcome.get(Util.RESULT).get(Util.REQUEST_PROPERTIES);
+                    listAliases(outcome, aliases);
+//                    outcome = replaceAliases(outcome.get(Util.RESULT).get(Util.REQUEST_PROPERTIES), aliases);
                 }
             }
         }
@@ -1150,21 +1168,7 @@ public class Util {
                 throw new OperationFormatException("The argument value is not specified for " + propName + ": '" + value + "'");
             }
             final ModelNode toSet = ArgumentValueConverter.DEFAULT.fromString(ctx, value);
-            if (outcome != null && outcome.hasDefined(propName)) {
-                try {
-                    ModelNode p = outcome.get(propName);
-                    if (p.hasDefined("type")) {
-                        applyReplacements(ctx, propName, toSet, p, p.get("type").asType(), attachments);
-                    }
-                } catch (Throwable ex) {
-                    //ex.printStackTrace();
-                    //System.err.println("OUTCOME " + outcome);
-                    //System.err.println("FAILED " + ex);
-                    //System.err.println("FAULTY " + propName + " " + outcome.get(propName));
-                    throw ex;
-                }
-            }
-            request.get(propName).set(toSet);
+            convertArgument(ctx, propName, toSet,  outcome, attachments, request, aliases);
         }
 
         if(parsedLine.getLastHeaderName() != null) {
@@ -1178,6 +1182,29 @@ public class Util {
             }
         }
         return request;
+    }
+
+    static void convertArgument(CommandContext ctx, String propName, final ModelNode toSet, ModelNode outcome, Attachments attachments, ModelNode request, Map<String, String> aliases) throws CommandFormatException {
+        final String attributeName = aliases.containsKey(propName) ? aliases.get(propName) : propName;
+        if (outcome != null && outcome.hasDefined(attributeName)) {
+            try {
+                ModelNode p = outcome.get(attributeName);
+                if (p.hasDefined("type")) {
+                    applyReplacements(ctx, propName, toSet, p, p.get("type").asType(), attachments, aliases);
+                }
+            } catch (Throwable ex) {
+                //ex.printStackTrace();
+                //System.err.println("OUTCOME " + outcome);
+                //System.err.println("FAILED " + ex);
+                //System.err.println("FAULTY " + propName + " " + outcome.get(propName));
+                throw ex;
+            }
+        }
+        if(aliases.containsKey(propName)) {
+            request.get(aliases.get(propName)).set(toSet);
+        } else {
+            request.get(propName).set(toSet);
+        }
     }
 
     public static String getMessagesFromThrowable(Throwable t){
@@ -1354,7 +1381,7 @@ public class Util {
     }
 
     static void applyReplacements(CommandContext ctx, String name, ModelNode value,
-            ModelNode description, ModelType mt, Attachments attachments) {
+            ModelNode description, ModelType mt, Attachments attachments, Map<String, String> aliases) {
         if (value == null || !value.isDefined()) {
             return;
         }
@@ -1375,14 +1402,14 @@ public class Util {
                 if (!mt.equals(value.getType())) {
                     break;
                 }
-                ModelNode valueType = description.get("value-type");
+                ModelNode valueType = description.get(VALUE_TYPE);
                 if (valueType.isDefined()) {
                     ModelType valueTypeType = valueType.getType();
                     // of Objects
                     if (ModelType.OBJECT.equals(valueTypeType)) {
                         for (int i = 0; i < value.asInt(); i++) {
-                            applyReplacements(ctx, "value-type", value.get(i),
-                                    valueType, ModelType.OBJECT, attachments);
+                            applyReplacements(ctx, VALUE_TYPE, value.get(i),
+                                    valueType, ModelType.OBJECT, attachments, aliases);
                         }
                     // of INT
                     } else if (ModelType.INT.equals(valueType.asType())) {
@@ -1403,7 +1430,7 @@ public class Util {
                 if (!mt.equals(value.getType())) {
                     break;
                 }
-                ModelNode valueType = description.get("value-type");
+                ModelNode valueType = description.get(VALUE_TYPE);
                 // This is a value-type value, use the description
                 if (!valueType.isDefined()) {
                     valueType = description;
@@ -1415,11 +1442,19 @@ public class Util {
                 ModelType valueTypeType = valueType.getType();
                 if (ModelType.OBJECT.equals(valueTypeType)) {
                     for (String k : value.keys()) {
-                        if (value.get(k).isDefined() && valueType.hasDefined(k)) {
-                            ModelNode p = valueType.get(k);
-                            if (p.hasDefined("type")) {
-                                applyReplacements(ctx, k, value.get(k), p,
-                                        p.get("type").asType(), attachments);
+                        String attributename;
+                        if(aliases.containsKey(k)) {
+                            attributename = aliases.get(k);
+                            value.get(attributename).set(value.get(k));
+                            value.remove(k);
+                        } else {
+                            attributename = k;
+                        }
+                        if (value.get(attributename).isDefined() && valueType.hasDefined(attributename)) {
+                            ModelNode p = valueType.get(attributename);
+                            if (p.hasDefined(TYPE)) {
+                                    applyReplacements(ctx, attributename, value.get(attributename), p,
+                                            p.get(TYPE).asType(), attachments, aliases);
                             }
                         }
                     }
