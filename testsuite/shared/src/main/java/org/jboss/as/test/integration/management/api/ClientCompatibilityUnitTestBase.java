@@ -57,6 +57,10 @@ public abstract class ClientCompatibilityUnitTestBase {
     protected abstract static class ClientCompatibilityServerSetup {
 
         public void setup(final ModelControllerClient client) throws Exception {
+            ModelNode remotingLoggingOp = Util.createAddOperation(PathAddress.parseCLIStyleAddress("/subsystem=logging/logger=org.jboss.remoting"));
+            ManagementOperations.executeOperation(client, remotingLoggingOp);
+            remotingLoggingOp = Util.getWriteAttributeOperation(PathAddress.parseCLIStyleAddress("/subsystem=logging/logger=org.jboss.remoting"), "level", "ALL");
+            ManagementOperations.executeOperation(client, remotingLoggingOp);
 
             ModelNode socketBindingOp = Util.createAddOperation(PathAddress.parseCLIStyleAddress("/socket-binding-group=standard-sockets/socket-binding=management-native"));
             socketBindingOp.get("interface").set("management");
@@ -80,6 +84,8 @@ public abstract class ClientCompatibilityUnitTestBase {
 
             ManagementOperations.executeOperation(client,
                     Util.createRemoveOperation(PathAddress.parseCLIStyleAddress("/socket-binding-group=standard-sockets/socket-binding=management-native")));
+            ManagementOperations.executeOperation(client,
+                    Util.createRemoveOperation(PathAddress.parseCLIStyleAddress("/subsystem=logging/logger=org.jboss.remoting")));
 
             ServerReload.executeReloadAndWaitForCompletion(client);
         }
