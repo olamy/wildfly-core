@@ -216,12 +216,12 @@ public class DeploymentAttributes {
     public static final StringListAttributeDefinition REMOVED_PATHS = new StringListAttributeDefinition.Builder(ModelDescriptionConstants.PATHS)
             .addArbitraryDescriptor(RELATIVE_TO, new ModelNode(true))
             .setAllowExpression(true)
-            .setAllowNull(false)
+            .setRequired(true)
             .build();
     public static final StringListAttributeDefinition UPDATED_PATHS = new StringListAttributeDefinition.Builder(ModelDescriptionConstants.PATH)
             .addArbitraryDescriptor(RELATIVE_TO, new ModelNode(true))
             .setAllowExpression(true)
-            .setAllowNull(false)
+            .setRequired(true)
             .build();
     public static final SimpleAttributeDefinition OVERWRITE = SimpleAttributeDefinitionBuilder.create(ModelDescriptionConstants.OVERWRITE, ModelType.BOOLEAN, true)
             .setDefaultValue(new ModelNode(true))
@@ -464,7 +464,7 @@ public class DeploymentAttributes {
                                                                                     ParameterValidator validator,
                                                                                     boolean allowExpression,
                                                                                     String... alternatives) {
-        SimpleAttributeDefinitionBuilder builder = SimpleAttributeDefinitionBuilder.create(name, type, true);
+        SimpleAttributeDefinitionBuilder builder = SimpleAttributeDefinitionBuilder.create(name, type, false);
         if (validator != null) {
             builder.setValidator(validator);
         }
