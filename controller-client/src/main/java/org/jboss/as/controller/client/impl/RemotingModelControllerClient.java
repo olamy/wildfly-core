@@ -23,6 +23,8 @@
 package org.jboss.as.controller.client.impl;
 
 import java.io.IOException;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.as.controller.client.ModelControllerClient;
@@ -113,9 +115,20 @@ public class RemotingModelControllerClient extends AbstractModelControllerClient
         }
         if (strategy == null) {
             try {
-
-                endpoint = Endpoint.builder().setEndpointName("management-client").build();
-
+                if (System.getSecurityManager() != null) {
+                    endpoint = AccessController.doPrivileged(new PrivilegedAction<Endpoint>() {
+                        @Override
+                        public Endpoint run() {
+                            try {
+                                return Endpoint.builder().setEndpointName("management-client").build();
+                            } catch (IOException ex) {
+                                throw new RuntimeException(ex);
+                            }
+                        }
+                    });
+                } else {
+                    endpoint = Endpoint.builder().setEndpointName("management-client").build();
+                }
                 final ProtocolConnectionConfiguration configuration = ProtocolConfigurationFactory.create(clientConfiguration, endpoint);
 
                 strategy = ManagementClientChannelStrategy.create(configuration, channelAssociation, clientConfiguration.getCallbackHandler(),
@@ -132,7 +145,22 @@ public class RemotingModelControllerClient extends AbstractModelControllerClient
                 throw new RuntimeException(e);
             }
         }
-        return strategy.getChannel();
+         if (System.getSecurityManager() != null) {
+            return AccessController.doPrivileged(new PrivilegedAction<Channel>() {
+                @Override
+                public Channel run() {
+                    try {
+                        return strategy.getChannel();
+                    } catch (RuntimeException ex) {
+                        throw ex;
+                    } catch (Exception ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
+            });
+        } else {
+            return strategy.getChannel();
+        }
     }
 
     @Override
