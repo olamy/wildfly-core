@@ -24,6 +24,9 @@ import java.io.IOException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
@@ -105,6 +108,7 @@ final class ModelControllerClientFactoryImpl implements ModelControllerClientFac
         private final ModelController modelController;
         private final Supplier<SecurityIdentity> securityIdentitySupplier;
         private final Executor executor;
+        private final Set<AtomicReference<Thread>> threads = Collections.synchronizedSet(new HashSet<>());
 
         private LocalClient(ModelController modelController, Supplier<SecurityIdentity> securityIdentitySupplier, Executor executor) {
             this.modelController = modelController;
@@ -114,7 +118,9 @@ final class ModelControllerClientFactoryImpl implements ModelControllerClientFac
 
         @Override
         public void close()  {
-            // whatever
+            threads.forEach(threadRef -> {Thread thread = threadRef.get(); if(thread != null) {
+                thread.interrupt();
+            }});
         }
 
         @Override
@@ -140,6 +146,7 @@ final class ModelControllerClientFactoryImpl implements ModelControllerClientFac
             }
 
             final AtomicReference<Thread> opThread = new AtomicReference<Thread>();
+            threads.add(opThread);
             final ResponseFuture<T> responseFuture = new ResponseFuture<T>(opThread, responseConverter, executor);
 
             final SecurityIdentity securityIdentity = securityIdentitySupplier.get();
@@ -168,6 +175,7 @@ final class ModelControllerClientFactoryImpl implements ModelControllerClientFac
                     } finally {
                         synchronized (opThread) {
                             opThread.set(null);
+                            threads.remove(opThread);
                             opThread.notifyAll();
                         }
                     }
