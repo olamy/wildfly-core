@@ -140,20 +140,6 @@ public class AuditLogBootingSyslogTest {
     }
 
     void configureElytron(final CompositeOperationBuilder compositeOp) throws IOException {
-        compositeOp.addStep(Operations.createWriteAttributeOperation(PathAddress.parseCLIStyleAddress("/subsystem=logging/periodic-rotating-file-handler=FILE").toModelNode(), "level", "TRACE"));
-        ModelNode addCategory = Operations.createAddOperation(PathAddress.parseCLIStyleAddress("/subsystem=logging/logger=org.jboss.as.domain.management.security").toModelNode());
-        addCategory.get("level").set("TRACE");
-        compositeOp.addStep(addCategory);
-        addCategory = Operations.createAddOperation(PathAddress.parseCLIStyleAddress("/subsystem=logging/logger=org.wildfly.extension.elytron").toModelNode());
-        addCategory.get("level").set("TRACE");
-        compositeOp.addStep(addCategory);
-        addCategory = Operations.createAddOperation(PathAddress.parseCLIStyleAddress("/subsystem=logging/logger=org.wildfly.security").toModelNode());
-        addCategory.get("level").set("TRACE");
-        compositeOp.addStep(addCategory);
-        addCategory = Operations.createAddOperation(PathAddress.parseCLIStyleAddress("/subsystem=logging/logger=org.jboss.as.controller").toModelNode());
-        addCategory.get("level").set("TRACE");
-        compositeOp.addStep(addCategory);
-
         ModelNode op = Operations.createOperation("map-remove", userAuthAddress);
         op.get("name").set("properties");
         op.get("key").set(DEFAULT_USER_KEY);
@@ -177,16 +163,16 @@ public class AuditLogBootingSyslogTest {
     }
 
     void resetElytron(final CompositeOperationBuilder compositeOp) {
-            ModelNode op = Operations.createOperation("map-remove", userAuthAddress);
-            op.get("name").set("properties");
-            op.get("key").set(DEFAULT_USER_KEY);
-            compositeOp.addStep(op.clone());
-            op = Operations.createOperation("map-put", userAuthAddress);
-            op.get("name").set("properties");
-            op.get("key").set(DEFAULT_USER_KEY);
-            op.get("value").set("$local");
-            compositeOp.addStep(op.clone());
-            compositeOp.addStep(Operations.createRemoveOperation(PathAddress.parseCLIStyleAddress("/subsystem=elytron/credential-store=test").toModelNode()));
-            compositeOp.addStep(Operations.createWriteAttributeOperation(userIdentRealmAddress, "identity", "$local"));
+        ModelNode op = Operations.createOperation("map-remove", userAuthAddress);
+        op.get("name").set("properties");
+        op.get("key").set(DEFAULT_USER_KEY);
+        compositeOp.addStep(op.clone());
+        op = Operations.createOperation("map-put", userAuthAddress);
+        op.get("name").set("properties");
+        op.get("key").set(DEFAULT_USER_KEY);
+        op.get("value").set("$local");
+        compositeOp.addStep(op.clone());
+        compositeOp.addStep(Operations.createRemoveOperation(PathAddress.parseCLIStyleAddress("/subsystem=elytron/credential-store=test").toModelNode()));
+        compositeOp.addStep(Operations.createWriteAttributeOperation(userIdentRealmAddress, "identity", "$local"));
     }
 }

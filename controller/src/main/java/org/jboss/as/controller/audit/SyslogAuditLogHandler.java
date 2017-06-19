@@ -71,7 +71,7 @@ public class SyslogAuditLogHandler extends AuditLogHandler {
     private volatile String tlsTrustStorePath;
     private volatile String tlsTrustStoreRelativeTo;
     private volatile String tlsTrustStorePassword;
-    private volatile SyslogAuditLogHandlerService syslogAuditLogHandlerService;
+    private volatile SyslogCredentialReferenceSupplier syslogAuditLogHandlerService;
     private volatile String tlsClientCertStorePath;
     private volatile String tlsClientCertStoreRelativeTo;
     private volatile String tlsClientCertStorePassword;
@@ -86,7 +86,7 @@ public class SyslogAuditLogHandler extends AuditLogHandler {
     private static final String APPNAME_REPLACE_VALUE = "_";
     private static final char[] EMPTY_PASSWORD = new char[0];
 
-    public SyslogAuditLogHandler(String name, String formatterName, int maxFailureCount, PathManagerService pathManager, SyslogAuditLogHandlerService syslogAuditLogHandlerService) {
+    public SyslogAuditLogHandler(String name, String formatterName, int maxFailureCount, PathManagerService pathManager, SyslogCredentialReferenceSupplier syslogAuditLogHandlerService) {
         super(name, formatterName, maxFailureCount);
         this.pathManager = pathManager;
         this.syslogAuditLogHandlerService = syslogAuditLogHandlerService;

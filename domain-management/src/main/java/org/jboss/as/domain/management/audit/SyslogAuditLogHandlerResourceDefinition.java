@@ -22,6 +22,7 @@
 package org.jboss.as.domain.management.audit;
 
 
+import static org.jboss.as.domain.management.audit.SyslogAuditLogHandlerService.SYSLOG_AUDIT_HANDLER;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.AUTHENTICATION;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.CLIENT_CERT_STORE;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OP_ADDR;
@@ -38,6 +39,7 @@ import java.util.Locale;
 import java.util.Set;
 
 import org.jboss.as.controller.AbstractAddStepHandler;
+import org.jboss.as.controller.AbstractRemoveStepHandler;
 import org.jboss.as.controller.AttributeDefinition;
 import org.jboss.as.controller.ModelVersion;
 import org.jboss.as.controller.OperationContext;
@@ -50,24 +52,19 @@ import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
 import org.jboss.as.controller.audit.ManagedAuditLogger;
 import org.jboss.as.controller.audit.SyslogAuditLogHandler;
 import org.jboss.as.controller.audit.SyslogAuditLogHandler.Facility;
-import org.jboss.as.controller.audit.SyslogAuditLogHandlerService;
-import org.jboss.as.controller.capability.RuntimeCapability;
 import org.jboss.as.controller.descriptions.ModelDescriptionConstants;
 import org.jboss.as.controller.operations.common.Util;
 import org.jboss.as.controller.operations.validation.EnumValidator;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.as.controller.registry.Resource;
 import org.jboss.as.controller.registry.Resource.ResourceEntry;
-import org.jboss.as.controller.security.CredentialReference;
 import org.jboss.as.controller.services.path.PathManagerService;
 import org.jboss.as.domain.management._private.DomainManagementResolver;
-import org.jboss.as.domain.management.audit.SyslogAuditLogProtocolResourceDefinition.TlsKeyStore;
 import org.jboss.as.domain.management.logging.DomainManagementLogger;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
 import org.jboss.dmr.Property;
 import org.jboss.logmanager.handlers.SyslogHandler;
-import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceName;
 
 /**
@@ -79,7 +76,6 @@ public class SyslogAuditLogHandlerResourceDefinition extends AuditLogHandlerReso
     private final EnvironmentNameReader environmentReader;
 
     private static final String DEFAULT_APP_NAME_IF_NOT_A_PRODUCT = "WildFly";
-    private static final RuntimeCapability SYSLOG_AUDIT_HANDLER = RuntimeCapability.Builder.of("org.wildfly.management.audit.handler", true, Void.class).build();
 
 
     public static final SimpleAttributeDefinition SYSLOG_FORMAT = new SimpleAttributeDefinitionBuilder(ModelDescriptionConstants.SYSLOG_FORMAT, ModelType.STRING)
@@ -122,8 +118,7 @@ public class SyslogAuditLogHandlerResourceDefinition extends AuditLogHandlerReso
         super(auditLogger, pathManager, new Parameters(PathElement.pathElement(SYSLOG_HANDLER),
                 DomainManagementResolver.getDeprecatedResolver(AccessAuditResourceDefinition.DEPRECATED_MESSAGE_CATEGORY, "core.management.syslog-handler"))
                 .setAddHandler(new SyslogAuditLogHandlerAddHandler(auditLogger, pathManager, environmentReader))
-                .setRemoveHandler(new HandlerRemoveHandler(auditLogger))
-                .setCapabilities(SYSLOG_AUDIT_HANDLER));
+                .setRemoveHandler(new HandlerRemoveHandler(auditLogger)));
         this.environmentReader = environmentReader;
         setDeprecated(ModelVersion.create(1, 7));
     }
@@ -189,12 +184,11 @@ public class SyslogAuditLogHandlerResourceDefinition extends AuditLogHandlerReso
                                                final String name,
                                                final Resource handlerResource,
                                                final EnvironmentNameReader environmentReader) throws OperationFailedException {
-        ServiceName serviceName = SYSLOG_AUDIT_HANDLER.getCapabilityServiceName(name);
+        ServiceName serviceName = SYSLOG_AUDIT_HANDLER.append(name);
         if(context.getServiceRegistry(true).getService(serviceName) != null) {
             context.removeService(serviceName);
         }
-        SyslogAuditLogHandlerService service = new SyslogAuditLogHandlerService();
-        ServiceBuilder<SyslogAuditLogHandlerService> serviceBuilder = context.getServiceTarget().addService(serviceName, service);
+        SyslogAuditLogHandlerService service = SyslogAuditLogHandlerService.installService(context, name, handlerResource);
         final ModelNode handlerModel = handlerResource.getModel();
         final String formatterName = FORMATTER.resolveModelAttribute(context, handlerModel).asString();
         final int maxFailureCount = MAX_FAILURE_COUNT.resolveModelAttribute(context, handlerModel).asInt();
@@ -256,14 +250,6 @@ public class SyslogAuditLogHandlerResourceDefinition extends AuditLogHandlerReso
                     handler.setTlsClientCertStoreKeyPassword(
                             resolveUndefinableAttribute(context,
                                     SyslogAuditLogProtocolResourceDefinition.TlsKeyStore.KEY_PASSWORD, storeModel));
-                    if (storeModel.hasDefined(TlsKeyStore.KEY_PASSWORD_CREDENTIAL_REFERENCE.getName())) {
-                        service.getTlsClientCertStoreKeyCredentialSourceSupplierInjector()
-                                .inject(CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEY_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder));
-                    }
-                    if (storeModel.hasDefined(TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE.getName())) {
-                        service.getTlsClientCertStoreCredentialSourceSupplierInjector()
-                                .inject(CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder));
-                    }
                 } else if (type.equals(TRUSTSTORE)) {
                     handler.setTlsTruststorePassword(
                             resolveUndefinableAttribute(context,
@@ -273,14 +259,9 @@ public class SyslogAuditLogHandlerResourceDefinition extends AuditLogHandlerReso
                     handler.setTlsTrustStoreRelativeTo(
                             resolveUndefinableAttribute(context,
                                     SyslogAuditLogProtocolResourceDefinition.TlsKeyStore.KEYSTORE_RELATIVE_TO, storeModel));
-                    if (storeModel.hasDefined(TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE.getName())) {
-                        service.getTlsTrustStoreSupplierInjector()
-                                .inject(CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder));
-                    }
                 }
             }
         }
-        serviceBuilder.install();
         return handler;
     }
 
@@ -299,6 +280,35 @@ public class SyslogAuditLogHandlerResourceDefinition extends AuditLogHandlerReso
             return environmentReader.getProductName();
         }
         return DEFAULT_APP_NAME_IF_NOT_A_PRODUCT;
+    }
+
+    static class SyslogAuditLogHandlerRemoveHandler extends AbstractRemoveStepHandler {
+
+        private final ManagedAuditLogger auditLogger;
+
+        SyslogAuditLogHandlerRemoveHandler(ManagedAuditLogger auditLogger) {
+            this.auditLogger = auditLogger;
+        }
+
+        @Override
+        protected boolean requiresRuntime(OperationContext context) {
+            return true;
+        }
+
+        @Override
+        protected void performRuntime(OperationContext context, ModelNode operation, ModelNode model) throws OperationFailedException {
+            String name = Util.getNameFromAddress(operation.require(OP_ADDR));
+            auditLogger.getUpdater().removeHandler(name);
+            context.removeService(SYSLOG_AUDIT_HANDLER.append(name));
+        }
+
+        @Override
+        protected void recoverServices(OperationContext context, ModelNode operation, ModelNode model) throws OperationFailedException {
+            auditLogger.getUpdater().rollbackChanges();
+            String name = Util.getNameFromAddress(operation.require(OP_ADDR));
+            final Resource handlerResource = context.readResourceFromRoot(getAffectedHandlerAddress(context));
+            SyslogAuditLogHandlerService.installService(context, name, handlerResource);
+        }
     }
 
     static class SyslogAuditLogHandlerAddHandler extends AbstractAddStepHandler {
