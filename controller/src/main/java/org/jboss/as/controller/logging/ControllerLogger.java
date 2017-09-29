@@ -3507,4 +3507,7 @@ public interface ControllerLogger extends BasicLogger {
 
     @Message(id = 4445, value = "%s with value '%s' in attribute %s is already defined")
     OperationFailedException alreadyDefinedAttribute(String resource, String value, String attribute);
+
+    @Message(id = 446, value = "Cannot synchronize the model due to missing extensions: %s")
+    OperationFailedException missingExtensions(Set<String> missingExtensions);
 }

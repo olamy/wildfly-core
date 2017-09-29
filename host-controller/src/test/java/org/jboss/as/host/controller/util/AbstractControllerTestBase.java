@@ -458,6 +458,14 @@ public abstract class AbstractControllerTestBase {
         }
     }
 
+    public class MockExpressionResolver implements ExpressionResolver {
+
+        @Override
+        public ModelNode resolveExpressions(ModelNode node) throws OperationFailedException {
+            return node.resolve();
+        }
+    }
+
     public class MockDomainController implements DomainController {
 
         @Override
@@ -531,12 +539,7 @@ public abstract class AbstractControllerTestBase {
 
         @Override
         public ExpressionResolver getExpressionResolver() {
-            return new ExpressionResolver() {
-                @Override
-                public ModelNode resolveExpressions(ModelNode node) throws OperationFailedException {
-                    return node.resolve();
-                }
-            };
+            return new MockExpressionResolver();
         }
 
         @Override
