@@ -26,6 +26,7 @@ import java.security.Permission;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.StringJoiner;
 
 import org.jboss.as.controller.OperationStepHandler;
 import org.jboss.as.controller.PathAddress;
@@ -92,6 +93,25 @@ public interface ImmutableManagementResourceRegistration {
      */
     default int getMinOccurs() {
         return getPathAddress().size() == 0 ? 1 : 0;
+    }
+
+
+    default boolean isFeature() {
+        return !PathAddress.EMPTY_ADDRESS.equals(getPathAddress());
+    }
+
+    default String getFeature() {
+        if(PathAddress.EMPTY_ADDRESS.equals(getPathAddress())) {
+            return "";
+        }
+        StringJoiner joiner = new StringJoiner(".");
+        for(PathElement elt : getPathAddress()) {
+                joiner.add(elt.getKey());
+            if(!elt.isWildcard()) {
+                joiner.add(elt.getValue());
+            }
+        }
+        return joiner.toString();
     }
 
     /**
