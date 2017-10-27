@@ -1099,6 +1099,10 @@ public class ExtensionRegistry {
         public Set<RuntimeCapability> getIncorporatingCapabilities() {
             return deployments.getIncorporatingCapabilities();
         }
+        @Override
+        public boolean isFeature() {
+            return deployments.isFeature();
+        }
     }
 
     private static final JmxAuthorizer NO_OP_AUTHORIZER = new JmxAuthorizer() {
