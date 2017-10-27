@@ -43,7 +43,7 @@ public class ScriptModelDiffWrapplerHandler implements OperationStepHandler {
 
     @Override
     public void execute(OperationContext context, ModelNode operation) throws OperationFailedException {
-        ((SynchronizationService) context.getServiceRegistry(false).getRequiredService(SynchronizationService.SERVICE_NAME).getService()).synchronize(context, true, true);
+        ((SynchronizationService) context.getServiceRegistry(false).getRequiredService(SynchronizationService.SERVICE_NAME).getService()).synchronize(context, true, true, false);
     }
 
 }
