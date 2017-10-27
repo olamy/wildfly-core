@@ -63,6 +63,7 @@ import org.jboss.as.controller.operations.common.XmlMarshallingHandler;
 import org.jboss.as.controller.operations.global.GlobalInstallationReportHandler;
 import org.jboss.as.controller.operations.global.GlobalNotifications;
 import org.jboss.as.controller.operations.global.GlobalOperationHandlers;
+import org.jboss.as.controller.operations.global.ReadFeatureHandler;
 import org.jboss.as.controller.operations.validation.EnumValidator;
 import org.jboss.as.controller.operations.validation.IntRangeValidator;
 import org.jboss.as.controller.operations.validation.ParameterValidator;
@@ -245,7 +246,7 @@ public class ServerRootResourceDefinition extends SimpleResourceDefinition {
             final MutableRootResourceRegistrationProvider rootResourceRegistrationProvider,
             final BootErrorCollector bootErrorCollector,
             final CapabilityRegistry capabilityRegistry) {
-        super(null, ServerDescriptions.getResourceDescriptionResolver(SERVER, false));
+        super(new Parameters(null, ServerDescriptions.getResourceDescriptionResolver(SERVER, false)).setFeature(false));
         this.contentRepository = contentRepository;
         this.extensibleConfigurationPersister = extensibleConfigurationPersister;
         this.serverEnvironment = serverEnvironment;
@@ -269,6 +270,7 @@ public class ServerRootResourceDefinition extends SimpleResourceDefinition {
     @Override
     public void registerOperations(ManagementResourceRegistration resourceRegistration) {
         GlobalOperationHandlers.registerGlobalOperations(resourceRegistration, ProcessType.STANDALONE_SERVER);
+        resourceRegistration.registerOperationHandler(ReadFeatureHandler.DEFINITION, ReadFeatureHandler.getInstance(capabilityRegistry), true);
 
         resourceRegistration.registerOperationHandler(ValidateOperationHandler.DEFINITION, ValidateOperationHandler.INSTANCE);
 
