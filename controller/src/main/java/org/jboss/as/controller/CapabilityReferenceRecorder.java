@@ -259,6 +259,7 @@ public interface CapabilityReferenceRecorder {
      * that do not meet this requirement.</strong>
      */
     class CompositeAttributeDependencyRecorder extends ContextDependencyRecorder {
+
         private AttributeDefinition[] attributes;
         private RuntimeCapability capability;
 
