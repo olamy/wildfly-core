@@ -133,7 +133,7 @@ public class ReadOperationHandler extends BaseOperationCommand {
             if(result.has(Util.DESCRIPTION)) {
                 ctx.printLine("\n\t" + result.get(Util.DESCRIPTION).asString());
             } else {
-                ctx.printLine("Operation description is not available.");
+                ctx.printLine(Util.formatWarnMessage("Operation description is not available."));
             }
 
             final StringBuilder buf = new StringBuilder();

@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.jboss.as.cli.CommandContext;
 import org.jboss.as.cli.CommandFormatException;
+import org.jboss.as.cli.Util;
 import org.jboss.as.cli.batch.Batch;
 import org.jboss.as.cli.batch.BatchManager;
 import org.jboss.as.cli.batch.BatchedCommand;
@@ -65,7 +66,7 @@ public class BatchListHandler extends CommandHandlerWithHelp {
                 ctx.printLine("#" + (i + 1) + ' ' + cmd.getCommand());
             }
         } else {
-            ctx.printLine("The batch is empty.");
+            ctx.printLine(Util.formatWarnMessage("The batch is empty."));
         }
     }
 

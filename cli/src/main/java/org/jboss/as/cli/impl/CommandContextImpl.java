@@ -975,7 +975,7 @@ public class CommandContextImpl implements CommandContext, ModelControllerClient
      */
     protected void error(String message) {
         this.exitCode = 1;
-        printLine(message);
+        printLine(Util.formatErrorMessage(message));
     }
 
     // Aesh input API expects InterruptedException so is implemented with input methods

@@ -92,9 +92,22 @@ public interface CommandContext {
      */
     default void printDMR(ModelNode node) {
         if (getConfig().isOutputJSON()) {
-            printLine(node.toJSONString(false));
+            printLine(Util.formatSuccessMessage(node.toJSONString(false)));
         } else {
-            printLine(node.toString());
+            printLine(Util.formatSuccessMessage(node.toString()));
+        }
+    }
+
+    /**
+     * Prints a ModelNode according to the current configuration.
+     *
+     * @param node The ModelNode to print.
+     */
+    default void printEchoDMR(ModelNode node) {
+        if (getConfig().isOutputJSON()) {
+            printLine(Util.formatEchoMessage(node.toJSONString(false)));
+        } else {
+            printLine(Util.formatEchoMessage(node.toString()));
         }
     }
 

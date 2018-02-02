@@ -40,6 +40,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
+import org.aesh.readline.terminal.formatting.CharacterType;
+import org.aesh.readline.terminal.formatting.Color;
+import org.aesh.readline.terminal.formatting.TerminalColor;
+import org.aesh.readline.terminal.formatting.TerminalString;
+import org.aesh.readline.terminal.formatting.TerminalTextStyle;
+
 
 import org.jboss.as.cli.CommandContext.Scope;
 import org.jboss.as.cli.handlers.FilenameTabCompleter;
@@ -211,9 +217,43 @@ public class Util {
 
     public static final String NOT_OPERATOR = "!";
 
+    private static final TerminalColor ERROR_COLOR = new TerminalColor(Color.RED, Color.DEFAULT, Color.Intensity.BRIGHT);
+    private static final TerminalColor SUCCESS_COLOR = new TerminalColor(Color.GREEN, Color.DEFAULT, Color.Intensity.NORMAL);
+    private static final TerminalColor ECHO_COLOR = new TerminalColor(Color.CYAN, Color.DEFAULT, Color.Intensity.NORMAL);
+    private static final TerminalColor WARN_COLOR = new TerminalColor(Color.YELLOW, Color.DEFAULT, Color.Intensity.BRIGHT);
+    private static final TerminalTextStyle ERROR_STYLE = new TerminalTextStyle(CharacterType.BOLD);
+    private static final boolean SEXY = Boolean.parseBoolean(WildFlySecurityManager.getPropertyPrivileged("unsupported.sexy", "false"));
     private static final String ENCODING_EXCEPTION_MESSAGE = "Encoding exception.";
 
     private static Logger LOG = Logger.getLogger(Util.class);
+
+    public static final String formatErrorMessage(String message) {
+        if(!SEXY) {
+            return message;
+        }
+        return new TerminalString("\u2716 " + message,ERROR_COLOR, ERROR_STYLE).toString();
+    }
+
+    public static final String formatSuccessMessage(String message) {
+        if(!SEXY) {
+            return message;
+        }
+        return new TerminalString("\u2714 " + message,SUCCESS_COLOR).toString();
+    }
+
+    public static final String formatEchoMessage(String message) {
+        if(!SEXY) {
+            return message;
+        }
+        return new TerminalString(message, ECHO_COLOR).toString();
+    }
+
+    public static final String formatWarnMessage(String message) {
+        if(!SEXY) {
+            return message;
+        }
+        return new TerminalString("\u26A0 " + message,WARN_COLOR, ERROR_STYLE).toString();
+    }
 
     public static boolean isWindows() {
         return WildFlySecurityManager.getPropertyPrivileged("os.name", null).toLowerCase(Locale.ENGLISH).indexOf("windows") >= 0;

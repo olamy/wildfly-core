@@ -129,7 +129,7 @@ class ExtensionsLoader {
         assert client != null : "client is null";
 
         if(moduleLoader == null) {
-            ctx.printLine("Warning! The CLI is running in a non-modular environment and cannot load commands from management extensions.");
+            ctx.printLine(Util.formatWarnMessage("Warning! The CLI is running in a non-modular environment and cannot load commands from management extensions."));
             return;
         }
 
@@ -200,7 +200,7 @@ class ExtensionsLoader {
         }
 
         if(!errors.isEmpty()) {
-            ctx.printLine("Warning! There were errors trying to load extensions. For more details, please, execute 'extension-commands --errors'");
+            ctx.printLine(Util.formatWarnMessage("Warning! There were errors trying to load extensions. For more details, please, execute 'extension-commands --errors'"));
         }
     }
 

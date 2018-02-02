@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.logging.Handler;
 
 import org.jboss.as.cli.CommandContext;
+import org.jboss.as.cli.Util;
 import org.jboss.logmanager.Configurator;
 import org.jboss.logmanager.Level;
 import org.jboss.logmanager.LogContext;
@@ -81,7 +82,7 @@ class EmbeddedLogContext {
                 }
                 configurator.configure(in);
             } catch (IOException e) {
-                ctx.printLine(String.format("Unable to configure logging from configuration file %s. Reason: %s", loggingProperties, e.getLocalizedMessage()));
+                ctx.printLine(Util.formatErrorMessage(String.format("Unable to configure logging from configuration file %s. Reason: %s", loggingProperties, e.getLocalizedMessage())));
             }
         }
         return embeddedLogContext;

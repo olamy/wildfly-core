@@ -59,7 +59,7 @@ public class ConnectionInfoHandler extends CommandHandlerWithHelp {
     protected void doHandle(CommandContext ctx) throws CommandLineException {
         final ModelControllerClient client = ctx.getModelControllerClient();
         if(client == null) {
-            ctx.printLine("<connect to the controller and re-run the connection-info command to see the connection information>\n");
+            ctx.printLine(Util.formatWarnMessage("<connect to the controller and re-run the connection-info command to see the connection information>\n"));
         } else {
 
             ConnectionInfo connInfo = ctx.getConnectionInfo();

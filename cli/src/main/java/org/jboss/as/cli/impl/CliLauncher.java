@@ -301,7 +301,7 @@ public class CliLauncher {
             cmdCtx = initCommandContext(ctxBuilder.build(), connect);
             cmdCtx.interact();
         } catch(Throwable t) {
-            System.out.println(Util.getMessagesFromThrowable(t));
+            System.out.println(Util.formatErrorMessage(Util.getMessagesFromThrowable(t)));
             log.error("Error processing CLI", t);
             exitCode = 1;
         } finally {
