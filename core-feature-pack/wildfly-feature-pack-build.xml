@@ -50,6 +50,12 @@
         <feature-group name="domain"/>
     </config>
 
+ <config model="host">
+        <config-deps>
+            <config-dep id="domain-dep" model="domain"/>
+        </config-deps>
+    </config>
+
     <config name="default-host" model="host">
         <props>
             <prop name="host-config-name" value="host.xml"/>
