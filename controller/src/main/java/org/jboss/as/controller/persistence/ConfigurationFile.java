@@ -32,6 +32,7 @@ import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
 import org.jboss.as.controller.logging.ControllerLogger;
@@ -129,7 +130,7 @@ public class ConfigurationFile {
     private final File currentHistory;
     private final File snapshotsDirectory;
     // Policy governing how to interact with the physical file
-    private final InteractionPolicy interactionPolicy;
+    private AtomicReference<InteractionPolicy> interactionPolicy;
     /* Backup copy of the most recent configuration, stored in the history dir.
        May be used as {@link #bootFile}; see {@link #reloadUsingLast} */
     private volatile File lastFile;
@@ -172,7 +173,7 @@ public class ConfigurationFile {
         this.historyRoot = new File(configurationDir, rawName.replace('.', '_') + "_history");
         this.currentHistory = new File(historyRoot, "current");
         this.snapshotsDirectory = new File(historyRoot, "snapshot");
-        this.interactionPolicy = interactionPolicy == null ? InteractionPolicy.STANDARD : interactionPolicy;
+        this.interactionPolicy = new AtomicReference<>(interactionPolicy == null ? InteractionPolicy.STANDARD : interactionPolicy);
         final File file = determineMainFile(rawName, name);
         try {
             this.mainFile = file.getCanonicalFile();
@@ -219,7 +220,7 @@ public class ConfigurationFile {
                     }
                     // If it's a reload with no new boot file name and we're persisting our config, we boot from mainFile,
                     // as that's where we persist
-                    if (bootFileReset && !interactionPolicy.isReadOnly() && newReloadBootFileName == null) {
+                    if (bootFileReset && !interactionPolicy.get().isReadOnly() && newReloadBootFileName == null) {
                         // we boot from mainFile
                         bootFile = mainFile;
                     } else {
@@ -232,7 +233,7 @@ public class ConfigurationFile {
                             //A new boot file was specified. Use that and reset the new name to null
                             bootFileName = newReloadBootFileName;
                             newReloadBootFileName = null;
-                        } else if (interactionPolicy.isReadOnly() && reloadUsingLast) {
+                        } else if (interactionPolicy.get().isReadOnly() && reloadUsingLast) {
                             //If we were reloaded, and it is not a persistent configuration we want to use the last from the history
                             bootFileName = LAST;
                         }
@@ -254,18 +255,18 @@ public class ConfigurationFile {
                                 // but the test infrastructure stuff is built around an assumption
                                 // that ConfigurationFile doesn't fail if test files are not
                                 // in the normal spot
-                                if (bootFileReset || interactionPolicy.isRequireExisting()) {
+                                if (bootFileReset || interactionPolicy.get().isRequireExisting()) {
                                     throw ControllerLogger.ROOT_LOGGER.fileNotFound(bootFile.getAbsolutePath());
                                 }
                             }
                             // Create it for the NEW and DISCARD cases
-                            if (!bootFileReset && !interactionPolicy.isRequireExisting()) {
+                            if (!bootFileReset && !interactionPolicy.get().isRequireExisting()) {
                                 createBootFile(bootFile);
                             }
                         } else if (!bootFileReset) {
-                            if (interactionPolicy.isRejectExisting() && bootFile.length() > 0) {
+                            if (interactionPolicy.get().isRejectExisting() && bootFile.length() > 0) {
                                 throw ControllerLogger.ROOT_LOGGER.rejectEmptyConfig(bootFile.getAbsolutePath());
-                            } else if (interactionPolicy.isRemoveExisting() && bootFile.length() > 0) {
+                            } else if (interactionPolicy.get().isRemoveExisting() && bootFile.length() > 0) {
                                 if (!bootFile.delete()) {
                                     throw ControllerLogger.ROOT_LOGGER.cannotDelete(bootFile.getAbsoluteFile());
                                 }
@@ -280,7 +281,11 @@ public class ConfigurationFile {
     }
 
     public InteractionPolicy getInteractionPolicy() {
-        return interactionPolicy;
+        return interactionPolicy.get();
+    }
+
+    public void enablePersistence() {
+        this.interactionPolicy.compareAndSet(InteractionPolicy.READ_ONLY, InteractionPolicy.STANDARD);
     }
 
     /**
@@ -316,7 +321,7 @@ public class ConfigurationFile {
             final File directoryFile = new File(configurationDir, name);
             if (directoryFile.exists()) {
                 mainName = stripPrefixSuffix(name); // TODO what if the stripped name doesn't exist? And why would there be a file like configuration/standalone.last.xml?
-            } else if (interactionPolicy.isReadOnly()) {
+            } else if (interactionPolicy.get().isReadOnly()) {
                 // We allow absolute paths in this case
                 final File absoluteFile = new File(name);
                 if (absoluteFile.exists()) {
@@ -324,7 +329,7 @@ public class ConfigurationFile {
                 }
             }
         }
-        if (mainName == null && !interactionPolicy.isRequireExisting()) {
+        if (mainName == null && !interactionPolicy.get().isRequireExisting()) {
             mainName = stripPrefixSuffix(name);
         }
         if (mainName != null) {
@@ -432,7 +437,7 @@ public class ConfigurationFile {
             if (result == null) {
                 if (directoryFile.exists()) {
                     result = directoryFile;
-                } else if (interactionPolicy.isReadOnly()) {
+                } else if (interactionPolicy.get().isReadOnly()) {
                     File absoluteFile = new File(name);
                     if (absoluteFile.exists()) {
                         result = absoluteFile;
@@ -479,7 +484,7 @@ public class ConfigurationFile {
                 return;
             }
             final File copySource;
-            if (!interactionPolicy.isReadOnly()) {
+            if (!interactionPolicy.get().isReadOnly()) {
                 copySource = mainFile;
             } else {
 
@@ -513,7 +518,7 @@ public class ConfigurationFile {
             } catch (IOException e) {
                 throw ControllerLogger.ROOT_LOGGER.failedToCreateConfigurationBackup(e, bootFile);
             } finally {
-                if (interactionPolicy.isReadOnly()) {
+                if (interactionPolicy.get().isReadOnly()) {
                     //Delete the temporary file
                     try {
                         FilePersistenceUtils.deleteFile(copySource);
@@ -532,7 +537,7 @@ public class ConfigurationFile {
             return;
         }
         try {
-            if (!interactionPolicy.isReadOnly()) {
+            if (!interactionPolicy.get().isReadOnly()) {
                 //Move the main file to the versioned history
                 moveFile(mainFile, getVersionedFile(mainFile));
             } else {
@@ -566,7 +571,7 @@ public class ConfigurationFile {
         if (!doneBootup.get()) {
             return;
         }
-        if (!interactionPolicy.isReadOnly()) {
+        if (!interactionPolicy.get().isReadOnly()) {
             FilePersistenceUtils.moveTempFileToMain(temp, mainFile);
         } else {
             FilePersistenceUtils.moveTempFileToMain(temp, lastFile);
@@ -575,7 +580,7 @@ public class ConfigurationFile {
 
     /** Notification that the configuration has been written, and its current content should be stored to the .last file */
     void fileWritten() throws ConfigurationPersistenceException {
-        if (!doneBootup.get() || interactionPolicy.isReadOnly()) {
+        if (!doneBootup.get() || interactionPolicy.get().isReadOnly()) {
             return;
         }
         try {
@@ -593,7 +598,7 @@ public class ConfigurationFile {
     String snapshot() throws ConfigurationPersistenceException {
         String name = getTimeStamp(new Date()) + mainFile.getName();
         File snapshot = new File(snapshotsDirectory, name);
-        File source = interactionPolicy.isReadOnly() ? lastFile : mainFile;
+        File source = interactionPolicy.get().isReadOnly() ? lastFile : mainFile;
         try {
             FilePersistenceUtils.copyFile(source, snapshot);
         } catch (IOException e) {

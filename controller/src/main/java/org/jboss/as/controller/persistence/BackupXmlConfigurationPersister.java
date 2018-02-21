@@ -40,7 +40,7 @@ import org.jboss.staxmapper.XMLElementWriter;
  */
 public class BackupXmlConfigurationPersister extends XmlConfigurationPersister {
 
-    private ConfigurationFile configurationFile;
+    protected ConfigurationFile configurationFile;
     private final AtomicBoolean successfulBoot = new AtomicBoolean();
 
     /**
@@ -108,7 +108,7 @@ public class BackupXmlConfigurationPersister extends XmlConfigurationPersister {
 
     @Override
     public PersistenceResource store(final ModelNode model, Set<PathAddress> affectedAddresses) throws ConfigurationPersistenceException {
-        if(!successfulBoot.get()) {
+        if(!isPersisting()) {
             return new PersistenceResource() {
                 public void commit() {
                 }
