@@ -57,6 +57,7 @@ import org.jboss.as.controller.extension.ExtensionRegistry;
 import org.jboss.as.controller.extension.ExtensionRegistryType;
 import org.jboss.as.controller.extension.ExtensionResourceDefinition;
 import org.jboss.as.controller.extension.MutableRootResourceRegistrationProvider;
+import org.jboss.as.controller.operations.common.EnablePersistenceHandler;
 import org.jboss.as.controller.operations.common.NamespaceAddHandler;
 import org.jboss.as.controller.operations.common.NamespaceRemoveHandler;
 import org.jboss.as.controller.operations.common.SchemaLocationAddHandler;
@@ -71,6 +72,7 @@ import org.jboss.as.controller.operations.validation.EnumValidator;
 import org.jboss.as.controller.operations.validation.IntRangeValidator;
 import org.jboss.as.controller.operations.validation.ParameterValidator;
 import org.jboss.as.controller.operations.validation.StringLengthValidator;
+import org.jboss.as.controller.persistence.DifferedBackupXmlConfigurationPersister;
 import org.jboss.as.controller.persistence.ExtensibleConfigurationPersister;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.as.controller.services.path.PathManagerService;
@@ -283,6 +285,10 @@ public class DomainRootDefinition extends SimpleResourceDefinition {
             resourceRegistration.registerOperationHandler(SnapshotListHandler.DEFINITION, snapshotList);
             SnapshotTakeHandler snapshotTake = new SnapshotTakeHandler(configurationPersister);
             resourceRegistration.registerOperationHandler(SnapshotTakeHandler.DEFINITION, snapshotTake);
+
+            if (configurationPersister instanceof DifferedBackupXmlConfigurationPersister) {
+                resourceRegistration.registerOperationHandler(EnablePersistenceHandler.DEFINITION, new EnablePersistenceHandler((DifferedBackupXmlConfigurationPersister) configurationPersister), false);
+            }
 
         } else {
             DeploymentUploadURLHandler.registerSlave(resourceRegistration);

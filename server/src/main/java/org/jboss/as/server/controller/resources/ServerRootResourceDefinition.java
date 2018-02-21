@@ -49,6 +49,7 @@ import org.jboss.as.controller.extension.ExtensionRegistry;
 import org.jboss.as.controller.extension.ExtensionRegistryType;
 import org.jboss.as.controller.extension.ExtensionResourceDefinition;
 import org.jboss.as.controller.extension.MutableRootResourceRegistrationProvider;
+import org.jboss.as.controller.operations.common.EnablePersistenceHandler;
 import org.jboss.as.controller.operations.common.NamespaceAddHandler;
 import org.jboss.as.controller.operations.common.NamespaceRemoveHandler;
 import org.jboss.as.controller.operations.common.ProcessStateAttributeHandler;
@@ -71,6 +72,7 @@ import org.jboss.as.controller.operations.validation.EnumValidator;
 import org.jboss.as.controller.operations.validation.IntRangeValidator;
 import org.jboss.as.controller.operations.validation.ParameterValidator;
 import org.jboss.as.controller.operations.validation.StringLengthValidator;
+import org.jboss.as.controller.persistence.DifferedBackupXmlConfigurationPersister;
 import org.jboss.as.controller.persistence.ExtensibleConfigurationPersister;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.as.controller.services.path.PathManagerService;
@@ -312,6 +314,9 @@ public class ServerRootResourceDefinition extends SimpleResourceDefinition {
         resourceRegistration.registerOperationHandler(SchemaLocationAddHandler.DEFINITION, SchemaLocationAddHandler.INSTANCE);
         resourceRegistration.registerOperationHandler(SchemaLocationRemoveHandler.DEFINITION, SchemaLocationRemoveHandler.INSTANCE);
         resourceRegistration.registerOperationHandler(ValidateAddressOperationHandler.DEFINITION, ValidateAddressOperationHandler.INSTANCE, false);
+        if(extensibleConfigurationPersister instanceof DifferedBackupXmlConfigurationPersister) {
+            resourceRegistration.registerOperationHandler(EnablePersistenceHandler.DEFINITION, new EnablePersistenceHandler((DifferedBackupXmlConfigurationPersister)extensibleConfigurationPersister), false);
+        }
 
         DeploymentUploadBytesHandler.register(resourceRegistration, contentRepository);
         DeploymentUploadURLHandler.register(resourceRegistration, contentRepository);

@@ -50,6 +50,7 @@ import org.jboss.as.controller.extension.ExtensionRegistry;
 import org.jboss.as.controller.extension.ExtensionRegistryType;
 import org.jboss.as.controller.extension.ExtensionResourceDefinition;
 import org.jboss.as.controller.extension.MutableRootResourceRegistrationProvider;
+import org.jboss.as.controller.operations.common.EnablePersistenceHandler;
 import org.jboss.as.controller.operations.common.NamespaceAddHandler;
 import org.jboss.as.controller.operations.common.NamespaceRemoveHandler;
 import org.jboss.as.controller.operations.common.ProcessStateAttributeHandler;
@@ -66,6 +67,7 @@ import org.jboss.as.controller.operations.global.GlobalInstallationReportHandler
 import org.jboss.as.controller.operations.global.ReadAttributeHandler;
 import org.jboss.as.controller.operations.validation.EnumValidator;
 import org.jboss.as.controller.operations.validation.StringLengthValidator;
+import org.jboss.as.controller.persistence.DifferedBackupXmlConfigurationPersister;
 import org.jboss.as.controller.registry.AttributeAccess;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.as.controller.services.path.PathManagerService;
@@ -358,6 +360,9 @@ public class HostResourceDefinition extends SimpleResourceDefinition {
         XmlMarshallingHandler xmh = new HostXmlMarshallingHandler(configurationPersister.getHostPersister(), hostControllerInfo);
         hostRegistration.registerOperationHandler(XmlMarshallingHandler.DEFINITION, xmh);
 
+        if(configurationPersister.getHostPersister() instanceof DifferedBackupXmlConfigurationPersister) {
+            hostRegistration.registerOperationHandler(EnablePersistenceHandler.DEFINITION, new EnablePersistenceHandler((DifferedBackupXmlConfigurationPersister)configurationPersister.getHostPersister()), false);
+        }
 
         StartServersHandler ssh = new StartServersHandler(environment, serverInventory, runningModeControl);
         hostRegistration.registerOperationHandler(StartServersHandler.DEFINITION, ssh);

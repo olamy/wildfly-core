@@ -39,6 +39,7 @@ import org.jboss.as.controller.parsing.Namespace;
 import org.jboss.as.controller.persistence.BackupXmlConfigurationPersister;
 import org.jboss.as.controller.persistence.ConfigurationFile;
 import org.jboss.as.controller.persistence.ConfigurationPersistenceException;
+import org.jboss.as.controller.persistence.DifferedBackupXmlConfigurationPersister;
 import org.jboss.as.controller.persistence.ExtensibleConfigurationPersister;
 import org.jboss.as.controller.persistence.ModelMarshallingContext;
 import org.jboss.as.controller.persistence.NullConfigurationPersister;
@@ -75,7 +76,12 @@ public class ConfigurationPersisterFactory {
         }
         HostXml hostXml = new HostXml(defaultHostname, environment.getRunningModeControl().getRunningMode(),
                 environment.isUseCachedDc(), Module.getBootModuleLoader(), executorService, hostExtensionRegistry);
-        BackupXmlConfigurationPersister persister = new BackupXmlConfigurationPersister(file, new QName(Namespace.CURRENT.getUriString(), "host"), hostXml, hostXml, false);
+        BackupXmlConfigurationPersister persister;
+         if(file.getInteractionPolicy() == ConfigurationFile.InteractionPolicy.READ_ONLY) {
+             persister = new DifferedBackupXmlConfigurationPersister(file, new QName(Namespace.CURRENT.getUriString(), "host"), hostXml, hostXml, false);
+         } else {
+             persister = new BackupXmlConfigurationPersister(file, new QName(Namespace.CURRENT.getUriString(), "host"), hostXml, hostXml, false);
+         }
         for (Namespace namespace : Namespace.domainValues()) {
             if (!namespace.equals(Namespace.CURRENT)) {
                 persister.registerAdditionalRootElement(new QName(namespace.getUriString(), "host"), hostXml);
@@ -100,8 +106,12 @@ public class ConfigurationPersisterFactory {
         if (!isReloaded && (policy == ConfigurationFile.InteractionPolicy.NEW || policy == ConfigurationFile.InteractionPolicy.DISCARD)) {
             suppressLoad = true;
         }
-
-        BackupXmlConfigurationPersister persister = new BackupXmlConfigurationPersister(file, new QName(Namespace.CURRENT.getUriString(), "domain"), domainXml, domainXml, suppressLoad);
+        BackupXmlConfigurationPersister persister;
+        if(file.getInteractionPolicy() == ConfigurationFile.InteractionPolicy.READ_ONLY) {
+             persister = new DifferedBackupXmlConfigurationPersister(file, new QName(Namespace.CURRENT.getUriString(), "domain"), domainXml, domainXml, suppressLoad);
+         } else {
+             persister = new BackupXmlConfigurationPersister(file, new QName(Namespace.CURRENT.getUriString(), "domain"), domainXml, domainXml, suppressLoad);
+         }
         for (Namespace namespace : Namespace.domainValues()) {
             if (!namespace.equals(Namespace.CURRENT)) {
                 persister.registerAdditionalRootElement(new QName(namespace.getUriString(), "domain"), domainXml);
