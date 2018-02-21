@@ -73,6 +73,7 @@ class EmbedServerHandler extends CommandHandlerWithHelp {
     private ArgumentWithValue stdOutHandling;
     private ArgumentWithValue adminOnly;
     private ArgumentWithValue serverConfig;
+    private ArgumentWithValue readOnlyserverConfig;
     private ArgumentWithValue dashC;
     private ArgumentWithoutValue emptyConfig;
     private ArgumentWithoutValue removeExisting;
@@ -86,6 +87,7 @@ class EmbedServerHandler extends CommandHandlerWithHelp {
 //        }
         result.stdOutHandling = new ArgumentWithValue(result, new SimpleTabCompleter(new String[]{ECHO, DISCARD_STDOUT}), "--std-out");
         result.serverConfig = new ArgumentWithValue(result, "--server-config");
+        result.readOnlyserverConfig = new ArgumentWithValue(result, "--read-only-server-config");
         result.dashC = new ArgumentWithValue(result, "-c");
         result.dashC.addCantAppearAfter(result.serverConfig);
         result.serverConfig.addCantAppearAfter(result.dashC);
@@ -121,6 +123,8 @@ class EmbedServerHandler extends CommandHandlerWithHelp {
         if (xml == null) {
             xml = dashC.getValue(parsedCmd);
         }
+        String readOnlyXml = readOnlyserverConfig.getValue(parsedCmd);
+
         boolean adminOnlySetting = true;
         String adminProp = adminOnly.getValue(parsedCmd);
         if (adminProp != null && "false".equalsIgnoreCase(adminProp)) {
@@ -202,7 +206,9 @@ class EmbedServerHandler extends CommandHandlerWithHelp {
                 }
                 cmdsList.add("--server-config=" + xml);
             }
-
+            if(readOnlyserverConfig.getValue(parsedCmd) != null) {
+                cmdsList.add("--read-only-server-config=" + readOnlyserverConfig.getValue(parsedCmd));
+            }
             // if --empty-config is present but the config file already exists we error unless --remove-config has also been used
             if (startEmpty && !removeConfig) {
                 String configFileName = xml == null ? "standalone.xml" : xml;

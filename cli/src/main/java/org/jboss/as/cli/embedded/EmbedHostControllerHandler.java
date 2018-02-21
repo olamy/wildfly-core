@@ -95,6 +95,8 @@ class EmbedHostControllerHandler extends CommandHandlerWithHelp {
     private ArgumentWithoutValue removeExistingDomainConfig;
     private ArgumentWithoutValue emptyHostConfig;
     private ArgumentWithoutValue removeExistingHostConfig;
+    private ArgumentWithValue readOnlyHostConfig;
+    private ArgumentWithValue readOnlyDomainConfig;
 
     static EmbedHostControllerHandler create(final AtomicReference<EmbeddedProcessLaunch> hostControllerReference, final CommandContext ctx, final boolean modular) {
         EmbedHostControllerHandler result = new EmbedHostControllerHandler(hostControllerReference);
@@ -105,6 +107,8 @@ class EmbedHostControllerHandler extends CommandHandlerWithHelp {
         result.stdOutHandling = new ArgumentWithValue(result, new SimpleTabCompleter(new String[]{ECHO, DISCARD_STDOUT}), "--std-out");
         result.domainConfig = new ArgumentWithValue(result, DOMAIN_CONFIG);
         result.hostConfig = new ArgumentWithValue(result, HOST_CONFIG);
+        result.readOnlyDomainConfig = new ArgumentWithValue(result,"--read-only-domain-config");
+        result.readOnlyHostConfig = new ArgumentWithValue(result,"--read-only-host-config");
         result.dashC = new ArgumentWithValue(result, "-c");
         result.dashC.addCantAppearAfter(result.domainConfig);
         result.domainConfig.addCantAppearAfter(result.dashC);
@@ -145,9 +149,19 @@ class EmbedHostControllerHandler extends CommandHandlerWithHelp {
             throw new CommandFormatException("The --domain-config (or -c) parameter requires a value.");
         }
 
+        String readOnlyDomainXml = readOnlyDomainConfig.getValue(parsedCmd);
+        if (readOnlyDomainConfig.isPresent(parsedCmd) && (readOnlyDomainXml == null || readOnlyDomainXml.isEmpty())) {
+            throw new CommandFormatException("The --read-only-domain-config parameter requires a value.");
+        }
+
         String hostXml = hostConfig.getValue(parsedCmd);
         if (hostConfig.isPresent(parsedCmd) && (hostXml == null || hostXml.isEmpty())) {
             throw new CommandFormatException("The --host-config parameter requires a value.");
+        }
+
+        String readOnlyHostXml = readOnlyHostConfig.getValue(parsedCmd);
+        if (readOnlyHostConfig.isPresent(parsedCmd) && (readOnlyHostXml == null || readOnlyHostXml.isEmpty())) {
+            throw new CommandFormatException("The --read-only-host-config parameter requires a value.");
         }
 
         Long bootTimeout = null;
@@ -217,6 +231,14 @@ class EmbedHostControllerHandler extends CommandHandlerWithHelp {
             if (hostXml != null && hostXml.trim().length() > 0) {
                 cmdsList.add(HOST_CONFIG);
                 cmdsList.add(hostXml.trim());
+            }
+
+            if (readOnlyDomainXml != null && readOnlyDomainXml.trim().length() > 0) {
+                cmdsList.add(readOnlyDomainConfig.getFullName()+ "=" + readOnlyDomainXml.trim());
+            }
+
+            if (readOnlyHostXml != null && readOnlyHostXml.trim().length() > 0) {
+                cmdsList.add(readOnlyHostConfig.getFullName()+ "=" + readOnlyHostXml.trim());
             }
 
             boolean emptyDomain = emptyDomainConfig.isPresent(parsedCmd);
