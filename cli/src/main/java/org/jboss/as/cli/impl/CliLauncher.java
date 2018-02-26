@@ -349,6 +349,7 @@ public class CliLauncher {
     private static void processFile(File file, final CommandContext cmdCtx) {
 
         BufferedReader reader = null;
+        long start = System.currentTimeMillis();
         try {
             reader = new BufferedReader(new FileReader(file));
             String line = reader.readLine();
@@ -361,6 +362,7 @@ public class CliLauncher {
         } finally {
             StreamUtils.safeClose(reader);
         }
+//        cmdCtx.printLine("The script " + file.getName() + " was  executed successfully in " + (System.currentTimeMillis() - start) + " ms");
     }
 
     private static final String JBOSS_CLI_RC_PROPERTY = "jboss.cli.rc";
