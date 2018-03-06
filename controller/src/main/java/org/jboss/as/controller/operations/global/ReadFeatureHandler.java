@@ -331,11 +331,13 @@ public class ReadFeatureHandler extends GlobalOperationHandlers.AbstractMultiTar
             feature.get(ModelDescriptionConstants.NAME).set(registration.getFeature());
             final DescriptionProvider addDescriptionProvider = registration.getOperationDescription(PathAddress.EMPTY_ADDRESS, ModelDescriptionConstants.ADD);
             final ModelNode requestProperties;
+            final Map<String, String> featureParamMappings;
             if (addDescriptionProvider != null) {
                 ModelNode annotation = feature.get(ANNOTATION);
                 annotation.get(ModelDescriptionConstants.NAME).set(ModelDescriptionConstants.ADD);
                 requestProperties = addDescriptionProvider.getModelDescription(locale).get(ModelDescriptionConstants.REQUEST_PROPERTIES);
-                addOpParam(annotation, requestProperties);
+                featureParamMappings = addParams(feature, pa, requestProperties);
+                addOpParam(annotation, requestProperties, featureParamMappings);
             } else {
                 requestProperties = new ModelNode().setEmptyList();
                 StringJoiner params = new StringJoiner(",");
@@ -361,19 +363,23 @@ public class ReadFeatureHandler extends GlobalOperationHandlers.AbstractMultiTar
                             }
                         }
                     }
+                    featureParamMappings = addParams(feature, pa, requestProperties);
                     if (requestProperties.isDefined() && !requestProperties.asList().isEmpty()) {
                         ModelNode annotation = feature.get(ANNOTATION);
                         annotation.get(ModelDescriptionConstants.NAME).set(ModelDescriptionConstants.WRITE_ATTRIBUTE_OPERATION);
-                        addOpParam(annotation, requestProperties);
+                        addOpParam(annotation, requestProperties, featureParamMappings);
+                    } else {
+                        feature.remove(ANNOTATION); //no operation
                     }
+                } else {
+                    featureParamMappings = Collections.emptyMap();
                 }
             }
-            Map<String, String> featureParamMappings = addParams(feature, pa, requestProperties);
             Set<String> capabilities = new HashSet<>();
             for (RuntimeCapability cap : registration.getCapabilities()) {
                 String capabilityName = cap.getName();
                 if (cap.isDynamicallyNamed()) {
-                    PathAddress aliasAddress = createAliasPathAddress(registration, pa, featureParamMappings);
+                    PathAddress aliasAddress = createAliasPathAddress(registration, pa);
                     capabilityName = cap.getDynamicName(aliasAddress);
                 }
                 if (isProfile) {
@@ -383,8 +389,8 @@ public class ReadFeatureHandler extends GlobalOperationHandlers.AbstractMultiTar
                 feature.get("provides").add(capabilityName);
             }
             complexAttributeChildren(feature, registration);
-            addReferences(feature, registration, featureParamMappings);
-            addRequiredCapabilities(feature, registration, requestProperties, capabilityScope, isProfile, capabilities, featureParamMappings, process);
+            addReferences(feature, registration);
+            addRequiredCapabilities(feature, registration, requestProperties, capabilityScope, isProfile, capabilities, featureParamMappings);
         }
         return result;
     }
@@ -487,10 +493,33 @@ public class ReadFeatureHandler extends GlobalOperationHandlers.AbstractMultiTar
     private Map<String, String> addParams(ModelNode feature, PathAddress address, ModelNode requestProperties) {
         ModelNode params = feature.get(PARAMETERS).setEmptyList();
         Set<String> paramNames = new HashSet<>();
+        StringJoiner addressParams = new StringJoiner(",");
+        for (PathElement elt : address) {
+            String paramName = elt.getKey();
+            ModelNode param = new ModelNode();
+            param.get(ModelDescriptionConstants.NAME).set(paramName);
+            if (PROFILE.equals(elt.getKey()) || HOST.equals(elt.getKey())) {
+                param.get(DEFAULT).set("PM_UNDEFINED");
+            } else if (!elt.isWildcard()) {
+                param.get(DEFAULT).set(elt.getValue());
+            }
+            param.get(FEATURE_ID).set(true);
+            params.add(param);
+            paramNames.add(paramName);
+            addressParams.add(paramName);
+        }
+        Map<String, String> featureParamMappings = new HashMap<>();
         for (Property att : requestProperties.asPropertyList()) {
             ModelNode param = new ModelNode();
-            param.get(ModelDescriptionConstants.NAME).set(att.getName());
-            paramNames.add(att.getName());
+            String paramName;
+            if (paramNames.contains(att.getName()) || ((PROFILE.equals(att.getName()) || HOST.equals(att.getName())) && isSubsystem(address))) {
+                paramName = att.getName() + "-feature";
+                featureParamMappings.put(att.getName(), paramName);
+            } else {
+                paramName = att.getName();
+            }
+            param.get(ModelDescriptionConstants.NAME).set(paramName);
+            paramNames.add(paramName);
             ModelNode attDescription = att.getValue();
             if (attDescription.hasDefined(NILLABLE) && attDescription.get(NILLABLE).asBoolean()) {
                 param.get(NILLABLE).set(true);
@@ -517,55 +546,19 @@ public class ReadFeatureHandler extends GlobalOperationHandlers.AbstractMultiTar
             }
             params.add(param);
         }
-        if (address == null || PathAddress.EMPTY_ADDRESS.equals(address)) {
-            return Collections.emptyMap();
-        }
-        final ModelNode annotationNode;
-        if (feature.hasDefined(ANNOTATION)) {
-            annotationNode = feature.get(ANNOTATION);
-        } else {
-            annotationNode = new ModelNode();
-        }
-        StringJoiner addressParams = new StringJoiner(",");
-        StringJoiner addressParamsMappings = new StringJoiner(",");
-        boolean keepMapping = false;
-        Map<String, String> featureParamMappings = new HashMap<>();
-        for (PathElement elt : address) {
-            String paramName;
-            if (paramNames.contains(elt.getKey())) {
-                keepMapping = true;
-                paramName = elt.getKey() + "-feature";
-                featureParamMappings.put(elt.getKey(), paramName);
-            } else {
-                paramName = elt.getKey();
-            }
-            ModelNode param = new ModelNode();
-            param.get(ModelDescriptionConstants.NAME).set(paramName);
-            if (PROFILE.equals(elt.getKey()) || HOST.equals(elt.getKey())) {
-                param.get(DEFAULT).set("PM_UNDEFINED");
-            } else if (!elt.isWildcard()) {
-                param.get(DEFAULT).set(elt.getValue());
-            }
-            param.get(FEATURE_ID).set(true);
-            params.add(param);
-            addressParams.add(paramName);
-            addressParamsMappings.add(elt.getKey());
-        }
+        final ModelNode annotationNode = feature.get(ANNOTATION);
         annotationNode.get(ADDRESS_PARAMETERS).set(addressParams.toString());
-        if (keepMapping) {
-            annotationNode.get(ADDRESS_PARAMETERS_MAPPING).set(addressParamsMappings.toString());
-        }
         return featureParamMappings;
     }
 
-    private void addReferences(ModelNode feature, ImmutableManagementResourceRegistration registration, Map<String, String> featureParamMappings) {
+    private void addReferences(ModelNode feature, ImmutableManagementResourceRegistration registration) {
         PathAddress address = registration.getPathAddress();
         if (address == null || PathAddress.EMPTY_ADDRESS.equals(address)) {
             return;
         }
         ModelNode refs = feature.get(REFERENCES).setEmptyList();
         if (registration.getParent() != null && registration.getParent().isFeature()) {
-            addReference(refs, registration.getParent(), featureParamMappings);
+            addReference(refs, registration.getParent());
         }
         PathElement element = registration.getPathAddress().getLastElement();
         if (SUBSYSTEM.equals(element.getKey())) {
@@ -583,7 +576,7 @@ public class ReadFeatureHandler extends GlobalOperationHandlers.AbstractMultiTar
         }
     }
 
-    private void addReference(ModelNode refs, ImmutableManagementResourceRegistration registration, Map<String, String> featureParamMappings) {
+    private void addReference(ModelNode refs, ImmutableManagementResourceRegistration registration) {
         PathAddress address = registration.getPathAddress();
         if (address == null || PathAddress.EMPTY_ADDRESS.equals(address)) {
             return;
@@ -591,34 +584,31 @@ public class ReadFeatureHandler extends GlobalOperationHandlers.AbstractMultiTar
         if (registration.isFeature()) {
             ModelNode ref = new ModelNode();
             ref.get(FEATURE).set(registration.getFeature());
-            if (!featureParamMappings.isEmpty()) {
-                ModelNode mappings = ref.get(MAPPINGS).setEmptyList();
-                boolean needMapping = false;
-                for (PathElement elt : registration.getPathAddress()) {
-                    if (featureParamMappings.containsKey(elt.getKey())) {
-                        needMapping = true;
-                        mappings.add(featureParamMappings.get(elt.getKey()), elt.getKey());
-                    } else {
-                        mappings.add(elt.getKey(), elt.getKey());
-                    }
-                }
-                if (!mappings.isDefined() || mappings.asList().isEmpty() || !needMapping) {
-                    ref.remove(MAPPINGS);
-                }
-            }
             refs.add(ref);
         }
         if (registration.getParent() != null) {
-            addReference(refs, registration.getParent(), featureParamMappings);
+            addReference(refs, registration.getParent());
         }
     }
 
-    private void addOpParam(ModelNode annotation, ModelNode requestProperties) {
+    private void addOpParam(ModelNode annotation, ModelNode requestProperties, Map<String, String> featureParamMappings) {
         if (requestProperties.isDefined()) {
             List<Property> request = requestProperties.asPropertyList();
             StringJoiner params = new StringJoiner(",");
+            StringJoiner paramMappings = new StringJoiner(",");
+            boolean keepMapping = false;
             for (Property att : request) {
-                params.add(att.getName());
+                String realName = att.getName();
+                if(featureParamMappings.containsKey(realName)) {
+                    keepMapping = true;
+                    params.add(featureParamMappings.get(realName));
+                } else {
+                    params.add(realName);
+                }
+                paramMappings.add(realName);
+            }
+            if(keepMapping) {
+                 annotation.get(OPERATION_PARAMETERS_MAPPING).set(paramMappings.toString());
             }
             annotation.get(OPERATION_PARAMETERS).set(params.toString());
         }
@@ -626,12 +616,8 @@ public class ReadFeatureHandler extends GlobalOperationHandlers.AbstractMultiTar
 
     private void addRequiredCapabilities(ModelNode feature,
             final ImmutableManagementResourceRegistration registration,
-            ModelNode requestProperties,
-            CapabilityScope scope,
-            boolean isProfile,
-            Set<String> capabilities,
-            Map<String, String> featureParamMappings,
-            ProcessType process) {
+            ModelNode requestProperties, CapabilityScope scope, boolean isProfile,
+            Set<String> capabilities, Map<String, String> featureParamMappings) {
         if (requestProperties.isDefined()) {
             List<Property> request = requestProperties.asPropertyList();
             if (!request.isEmpty()) {
@@ -654,10 +640,11 @@ public class ReadFeatureHandler extends GlobalOperationHandlers.AbstractMultiTar
                             baseName = capabilityName;
                         }
                         CapabilityRegistration capReg = getCapability(new CapabilityId(baseName, scope));
+                        String attributeName = featureParamMappings.containsKey(att.getName()) ? featureParamMappings.get(att.getName()) : att.getName();
                         if (capReg == null) {
-                            capabilityName = baseName + ".$" + att.getName();
+                            capabilityName = baseName + ".$" + attributeName;
                         } else if (capReg.getCapability().isDynamicallyNamed() && capabilityName.indexOf('$') <= 0) {
-                            capabilityName = baseName + ".$" + att.getName();
+                            capabilityName = baseName + ".$" + attributeName;
                         }
                         if (filteredOut) {
                             continue;
@@ -690,7 +677,7 @@ public class ReadFeatureHandler extends GlobalOperationHandlers.AbstractMultiTar
                                     refs = feature.get(REFERENCES);
                                 }
                                 if (registration.getParent() != null && registration.getParent().isFeature()) {
-                                    addReference(refs, registration.getParent(), featureParamMappings);
+                                    addReference(refs, registration.getParent());
                                 }
                                 for (RegistrationPoint regPoint : (Set<RegistrationPoint>) capReg.getRegistrationPoints()) {
                                     ModelNode ref = new ModelNode();
@@ -742,6 +729,14 @@ public class ReadFeatureHandler extends GlobalOperationHandlers.AbstractMultiTar
         return registration;
     }
 
+    private boolean isSubsystem(PathAddress address) {
+        for(PathElement elt : address) {
+            if(SUBSYSTEM.equals(elt.getKey())) {
+                return true;
+            }
+        }
+        return false;
+    }
     private boolean isProfileScope(ProcessType processType, PathAddress address) {
         PathElement pe = processType.isServer() || address.size() == 0 ? null : address.getElement(0);
         if (pe != null) {
@@ -763,7 +758,7 @@ public class ReadFeatureHandler extends GlobalOperationHandlers.AbstractMultiTar
         return capReg;
     }
 
-    private PathAddress createAliasPathAddress(final ImmutableManagementResourceRegistration registration, PathAddress pa, Map<String, String> featureParamMappings) {
+    private PathAddress createAliasPathAddress(final ImmutableManagementResourceRegistration registration, PathAddress pa) {
         ImmutableManagementResourceRegistration registry = registration.getParent();
         List<PathElement> elements = new ArrayList<>();
         for (int i = pa.size() - 1; i >= 0; i--) {
@@ -772,12 +767,7 @@ public class ReadFeatureHandler extends GlobalOperationHandlers.AbstractMultiTar
             if (childRegistration == null) {
                 elements.add(elt);
             } else {
-                String value;
-                if (featureParamMappings.containsKey(elt.getKey())) {
-                    value = "$" + featureParamMappings.get(elt.getKey());
-                } else {
-                    value = "$" + elt.getKey();
-                }
+                String value = "$" + elt.getKey();
                 elements.add(PathElement.pathElement(elt.getKey(), value));
             }
             registry = registry.getParent();
