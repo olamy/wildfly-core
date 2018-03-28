@@ -33,7 +33,7 @@
     <fileSets>
         <fileSet>
             <directory>target/${server.output.dir.prefix}-feature-pack-${project.version}</directory>
-            <outputDirectory/>            
+            <outputDirectory/>
         </fileSet>
     </fileSets>
 </assembly>
