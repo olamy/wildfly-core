@@ -40,8 +40,19 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.wildfly.core</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>wildfly-core-feature-pack</artifactId>
+            <type>zip</type>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>wildfly-core-galleon-pack</artifactId>
             <type>zip</type>
             <exclusions>
                 <exclusion>
@@ -67,6 +78,47 @@
                         <phase>compile</phase>
                         <configuration>
                             <config-file>server-provisioning.xml</config-file>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.jboss.pm</groupId>
+                <artifactId>feature-pack-build-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>process-test-sources</phase>
+                        <id>server-provisioning</id>
+                        <goals>
+                            <goal>provision</goal>
+                        </goals>
+                        <configuration>
+                            <featurePack>
+                                <groupId>org.wildfly.core</groupId>
+                                <artifactId>wildfly-core-galleon-pack</artifactId>
+                                <version>${project.version}</version>
+                                <type>zip</type>
+                                <extension>zip</extension>
+                            </featurePack>
+                            <outputDirectory>${project.build.directory}/wildfly-core-galleon</outputDirectory>
+                            <configs>
+                                <config>
+                                    <model>standalone</model>
+                                </config>
+                                <config>
+                                    <model>host</model>
+                                </config>
+                                <config>
+                                    <model>domain</model>
+                                </config>
+                            </configs>
+                            <inheritPackages>true</inheritPackages>
+                            <options>
+                                <jboss.maven.dist></jboss.maven.dist>
+                            </options>
+                            <excludedPackages>
+                                <param>product.conf</param>
+                            </excludedPackages>
                         </configuration>
                     </execution>
                 </executions>
