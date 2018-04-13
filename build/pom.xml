@@ -67,24 +67,8 @@
         <finalName>${server.output.dir.prefix}-${project.version}</finalName>
         <plugins>
             <plugin>
-                <groupId>org.wildfly.build</groupId>
-                <artifactId>wildfly-server-provisioning-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>server-provisioning</id>
-                        <goals>
-                            <goal>build</goal>
-                        </goals>
-                        <phase>compile</phase>
-                        <configuration>
-                            <config-file>server-provisioning.xml</config-file>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.jboss.pm</groupId>
-                <artifactId>feature-pack-build-maven-plugin</artifactId>
+                <groupId>org.jboss.galleon</groupId>
+                <artifactId>galleon-pack-build-maven-plugin</artifactId>
                 <executions>
                     <execution>
                         <phase>process-test-sources</phase>
