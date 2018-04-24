@@ -39,7 +39,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <license.directory>${project.build.directory}/${project.build.finalName}/content/docs/licenses</license.directory>
+        <license.directory>${project.build.directory}/resources/content/docs/licenses</license.directory>
     </properties>
 
     <dependencies>
@@ -109,10 +109,10 @@
             <groupId>org.jboss.spec.javax.security.jacc</groupId>
             <artifactId>jboss-jacc-api_1.5_spec</artifactId>
             <exclusions>
-	        <exclusion>
+                <exclusion>
                     <groupId>org.jboss.spec.javax.servlet</groupId>
                     <artifactId>jboss-servlet-api_3.1_spec</artifactId>
-                    </exclusion>
+                </exclusion>
             </exclusions>
         </dependency>
 
@@ -537,7 +537,7 @@
                             <goal>copy-resources</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${basedir}/target/resources/config/packages/licenses/content/docs/licenses</outputDirectory>
+                            <outputDirectory>${basedir}/target/resources/content/docs/licenses</outputDirectory>
                             <resources>
                                 <resource>
                                     <directory>${project.basedir}/src/license</directory>
@@ -564,8 +564,8 @@
                         <phase>process-resources</phase>
                         <configuration>
                             <sortByGroupIdAndArtifactId>true</sortByGroupIdAndArtifactId>
-                            <licensesOutputDirectory>${basedir}/target/resources/config/packages/licenses/content/docs/licenses</licensesOutputDirectory>
-                            <licensesOutputFile>${basedir}/target/resources/config/packages/licenses/content/docs/licenses/core-feature-pack-licenses.xml</licensesOutputFile>
+                            <licensesOutputDirectory>${license.directory}</licensesOutputDirectory>
+                            <licensesOutputFile>${license.directory}/core-feature-pack-licenses.xml</licensesOutputFile>
                             <excludedScopes>system,provided</excludedScopes>
                         </configuration>
                     </execution>
@@ -585,12 +585,12 @@
                         <configuration>
                             <transformationSets>
                                 <transformationSet>
-                                    <dir>${basedir}/target/resources/config/packages/licenses/content/docs/licenses</dir>
+                                    <dir>${license.directory}</dir>
                                     <includes>
                                         <include>*licenses.xml</include>
                                     </includes>
                                     <stylesheet>src/main/resources/content/docs/licenses/licenses.xsl</stylesheet>
-                                    <outputDir>${basedir}/target/resources/config/packages/licenses/content/docs/licenses</outputDir>
+                                    <outputDir>${license.directory}</outputDir>
                                     <fileMappers>
                                         <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.FileExtensionMapper">
                                             <targetExtension>.html</targetExtension>
