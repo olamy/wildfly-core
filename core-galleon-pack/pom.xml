@@ -571,6 +571,7 @@
                     </execution>
                 </executions>
             </plugin>
+            <!--
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>xml-maven-plugin</artifactId>
@@ -598,8 +599,12 @@
                                     </fileMappers>
                                     <parameters>
                                         <parameter>
-                                            <name>version</name>
+                                            <name>project.version</name>
                                             <value>${project.version}</value>
+                                        </parameter>
+                                        <parameter>
+                                            <name>product.release.name</name>
+                                            <value>WildFly Core</value>
                                         </parameter>
                                     </parameters>
                                 </transformationSet>
@@ -608,6 +613,7 @@
                     </execution>
                 </executions>
             </plugin>
+            -->
 
             <plugin>
                 <groupId>org.wildfly.galleon-plugins</groupId>
@@ -725,7 +731,7 @@
                 </plugins>
             </build>
         </profile>
-
+<!--
         <profile>
             <id>generate-licenses-html</id>
             <activation>
@@ -776,7 +782,7 @@
                 </plugins>
             </build>
         </profile>
-
+-->
         <profile>
             <id>enforce</id>
             <activation>

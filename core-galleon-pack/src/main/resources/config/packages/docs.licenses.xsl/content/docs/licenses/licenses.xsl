@@ -3,10 +3,11 @@
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
     <xsl:output method="html" encoding="utf-8" standalone="no" media-type="text/html" />
-    <xsl:param name="version"/>
+    <xsl:param name="product.release.name"/>
+    <xsl:param name="project.version"/>
     <xsl:variable name="lowercase" select="'abcdefghijklmnopqrstuvwxyz '" />
     <xsl:variable name="uppercase" select="'ABCDEFGHIJKLMNOPQRSTUVWXYZ!'" />
-    
+
     <xsl:template match="/">
         <html>
             <head>
@@ -14,7 +15,7 @@
                 <link rel="stylesheet" type="text/css" href="licenses.css"/>
             </head>
             <body>
-                <h2>Wildfly Core <xsl:value-of select="$version"/></h2>
+                <h2><xsl:value-of select="$product.release.name"/>&#160;<xsl:value-of select="$project.version"/>&#160;Feature Pack</h2>
                 <p>The following material has been provided for informational purposes only, and should not be relied upon or construed as a legal opinion or legal advice.</p>
                 <!-- Read matching templates -->
                 <table>
@@ -33,7 +34,14 @@
                             <td><xsl:value-of select="version"/></td>
                             <td>
                                 <xsl:for-each select="licenses/license">
-                                    <a href="{./url}"><xsl:value-of select="name"/></a><br/>
+                                    <xsl:choose>
+                                        <xsl:when test="name = 'Public Domain'">
+                                            <xsl:value-of select="name"/><br/>
+                                        </xsl:when>
+                                        <xsl:otherwise>
+                                            <a href="{./url}"><xsl:value-of select="name"/></a><br/>
+                                        </xsl:otherwise>
+                                    </xsl:choose>
                                 </xsl:for-each>
                             </td>
                             <td>
@@ -59,11 +67,23 @@
             <xsl:when test="$name = 'BSD 3-clause &quot;New&quot; or &quot;Revised&quot; License'">
                 <xsl:text>bsd 3-clause new or revised license.html</xsl:text>
             </xsl:when>
-            <xsl:when test="$name = 'GNU General Public License v2.0 only'">
-                <xsl:text>gnu general public license v2.0 only.html</xsl:text>
+            <xsl:when test="$name = 'BSD 3-Clause No Nuclear License'">
+                <xsl:text>bsd 3-clause no nuclear license.html</xsl:text>
             </xsl:when>
-            <xsl:when test="$name = 'Indiana University Extreme! Lab Software License 1.1.1'">
-                <xsl:text>indiana university extreme lab software license 1.1.1.html</xsl:text>
+            <xsl:when test="$name = 'Creative Commons Attribution 2.5'">
+                <xsl:text>creative commons attribution 2.5.html</xsl:text>
+            </xsl:when>
+            <xsl:when test="$name = 'GNU Lesser General Public License v2.1 or later'">
+                <xsl:text>gnu lesser general public license v2.1 or later.html</xsl:text>
+            </xsl:when>
+            <xsl:when test="$name = 'Mozilla Public License 2.0'">
+                <xsl:text>mozilla public license 2.0.html</xsl:text>
+            </xsl:when>
+            <xsl:when test="$name = 'Plexus Classworlds License'">
+                <xsl:text>plexus classworlds license.html</xsl:text>
+            </xsl:when>
+            <xsl:when test="$name = 'The JSoup MIT License'">
+                <xsl:text>the jsoup mit license.html</xsl:text>
             </xsl:when>
             <xsl:otherwise>
                 <xsl:value-of select="concat(translate($name, $uppercase, $lowercase), '.txt')"/>
