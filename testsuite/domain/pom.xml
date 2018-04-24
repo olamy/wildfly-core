@@ -76,6 +76,12 @@
             <artifactId>apacheds-all</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.wildfly.core</groupId>
+            <artifactId>wildfly-jmx</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>

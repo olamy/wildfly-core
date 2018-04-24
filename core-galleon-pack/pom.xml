@@ -399,6 +399,12 @@
         <dependency>
             <groupId>org.wildfly.core</groupId>
             <artifactId>wildfly-logging</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
