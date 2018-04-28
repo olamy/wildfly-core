@@ -50,6 +50,7 @@
             <package name="cleanup.standalone.config.history.dir"/>
             <package name="cleanup.standalone.log.dir"/>
             <package name="cleanup.standalone.data.dir"/>
+            <package name="cleanup.standalone.tmp.vfs"/>
         </packages>
     </config>
 
