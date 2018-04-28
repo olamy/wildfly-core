@@ -23,6 +23,7 @@
 <build xmlns="urn:wildfly:feature-pack-build:2.0">
     <default-packages>
         <package name="modules.all"/>
+        <package name="docs"/>
     </default-packages>
     <package-schemas>
         <group name="org.wildfly.core"/>
