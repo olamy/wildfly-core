@@ -3,6 +3,7 @@
     <feature spec="server-root">
         <param name="server-root" value="/" />
     </feature>
+    <feature-group name="interfaces"/>
     <feature spec="socket-binding-group">
         <param name="default-interface" value="public" />
         <param name="socket-binding-group" value="standard-sockets" />
@@ -11,7 +12,6 @@
     </feature>
     <feature-group name="standalone-security-realms"/>
     <feature-group name="audit"/>
-    <feature-group name="interfaces"/>
     <feature-group name="management-interfaces"/>
     <feature-group name="access-control"/>
 

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <feature-group-spec name="host-profile" xmlns="urn:jboss:galleon:feature-group:1.0">
-    <feature-group name="jmx"/>
     <feature-group name="core-management"/>
     <feature spec="subsystem.elytron">
         <param name="final-providers" value="combined-providers"/>
@@ -20,4 +19,5 @@
             </include>
         </feature-group>
     </feature>
+    <feature-group name="jmx"/>
 </feature-group-spec>
