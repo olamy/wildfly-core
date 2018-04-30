@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <feature-group-spec name="basic-profile" xmlns="urn:jboss:galleon:feature-group:1.0">
     <feature-group name="logging"/>
-    <feature-group name="core-management"/>
+    <feature spec="subsystem.core-management"/>
     <feature spec="subsystem.elytron">
         <feature-group name="elytron-common"/>
         <feature-group name="elytron-app"/>
     </feature>
     <feature-group name="jmx"/>
-    <feature-group name="request-controller"/>
+    <feature spec="subsystem.request-controller"/>
 </feature-group-spec>

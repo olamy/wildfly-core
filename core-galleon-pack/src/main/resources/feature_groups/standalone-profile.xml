@@ -3,7 +3,7 @@
 
     <feature-group name="basic-profile"/>
 
-    <feature-group name="discovery"/>
+    <feature spec="subsystem.discovery"/>
     <feature spec="subsystem.elytron">
         <param name="final-providers" value="combined-providers"/>
         <param name="disallowed-providers" value="[OracleUcrypto]"/>

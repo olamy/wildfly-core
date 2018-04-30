@@ -8,10 +8,10 @@
         <param name="default-interface" value="public" />
         <param name="socket-binding-group" value="standard-sockets" />
         <param name="port-offset" value="${jboss.socket.binding.port-offset:0}"/>
-        <feature-group name="default-sockets"/>
+        <feature-group name="management-sockets"/>
     </feature>
     <feature-group name="standalone-security-realms"/>
-    <feature-group name="audit"/>
+    <feature-group name="management-audit"/>
     <feature-group name="management-interfaces"/>
     <feature-group name="access-control"/>
 

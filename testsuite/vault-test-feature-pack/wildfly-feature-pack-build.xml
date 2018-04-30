@@ -35,11 +35,6 @@
         </dependency>
     </dependencies>
     <default-packages>
-        <package name="org.picketbox.main"/>
+        <package name="org.picketbox"/>
     </default-packages>
-    <config model="vault.test">
-        <packages>
-            <package name="org.picketbox.main"/>
-        </packages>
-    </config>
 </build>

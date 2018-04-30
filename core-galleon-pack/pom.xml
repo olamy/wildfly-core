@@ -40,6 +40,7 @@
 
     <properties>
         <license.directory>${project.build.directory}/resources/content/docs/licenses</license.directory>
+        <feature-pack.resources.directory>${basedir}/../core-feature-pack/src/main/resources</feature-pack.resources.directory>
     </properties>
 
     <dependencies>
@@ -542,6 +543,25 @@
                         </configuration>
                     </execution>
                     <execution>
+                        <id>copy-feature-pack-resources</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${basedir}/target/resources</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${feature-pack.resources.directory}</directory>
+                                    <includes>
+                                        <include>content/**</include>
+                                        <include>modules/**</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <id>copy-licenses-xml-package</id>
                         <phase>process-resources</phase>
                         <goals>
@@ -592,6 +612,7 @@
                         <goals>
                             <goal>generate-feature-specs</goal>
                         </goals>
+                        <phase>compile</phase>
                         <configuration>
                             <output-dir>${basedir}/target/resources/features</output-dir>
                             <standalone-extensions>
